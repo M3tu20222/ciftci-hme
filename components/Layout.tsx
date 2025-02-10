@@ -95,7 +95,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       <main className="flex-grow container mx-auto px-4 py-8">{children}</main>
       <footer className="bg-gray-800 border-t border-neon-blue">
         <div className="container mx-auto px-4 py-4 text-center text-neon-cyan">
-          &copy; 2023 Çiftçilik Sistemi. Tüm hakları saklıdır.
+          &copy; 2025 Çiftçilik Sistemi. Tüm hakları saklıdır.
         </div>
       </footer>
     </div>

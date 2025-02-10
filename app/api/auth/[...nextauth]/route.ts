@@ -1,66 +1,74 @@
-import NextAuth, { NextAuthOptions, User } from "next-auth";
+import NextAuth, { type NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
-import { MongoDBAdapter } from "@next-auth/mongodb-adapter";
-import clientPromise from "@/lib/mongodb";
-import bcrypt from "bcryptjs";
-import { JWT } from "next-auth/jwt";
-
-interface ExtendedUser extends User {
-  role?: string;
-}
+import bcryptjs from "bcryptjs";
+import dbConnect from "@/lib/mongodb";
+import { User } from "@/models/User";
+import type { JWT } from "next-auth/jwt";
 
 export const authOptions: NextAuthOptions = {
-  adapter: MongoDBAdapter(clientPromise),
   providers: [
     CredentialsProvider({
       name: "Credentials",
       credentials: {
-        email: { label: "Email", type: "text" },
+        email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" },
       },
       async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password) return null;
+        if (!credentials?.email || !credentials?.password) {
+          throw new Error("Email ve şifre gereklidir");
+        }
 
-        const client = await clientPromise;
-        const db = client.db();
-        const user = await db
-          .collection("users")
-          .findOne({ email: credentials.email });
+        try {
+          await dbConnect();
 
-        if (user && bcrypt.compareSync(credentials.password, user.password)) {
+          const user = await User.findOne({ email: credentials.email });
+
+          if (!user) {
+            throw new Error("Geçersiz email veya şifre");
+          }
+
+          const isValid = await bcryptjs.compare(
+            credentials.password,
+            user.password
+          );
+
+          if (!isValid) {
+            throw new Error("Geçersiz email veya şifre");
+          }
+
           return {
             id: user._id.toString(),
             name: user.name,
             email: user.email,
             role: user.role,
-          } as ExtendedUser;
+          };
+        } catch (error) {
+          console.error("Auth error:", error);
+          throw new Error("Kimlik doğrulama hatası");
         }
-
-        return null;
       },
     }),
   ],
-  session: {
-    strategy: "jwt",
-  },
   callbacks: {
-    async jwt({ token, user }: { token: JWT; user?: ExtendedUser }) {
+    async jwt({ token, user }: { token: JWT; user?: any }) {
       if (user) {
-        token.id = user.id;
         token.role = user.role;
+        token.id = user.id;
       }
       return token;
     },
     async session({ session, token }: { session: any; token: JWT }) {
       if (session?.user) {
-        session.user.id = token.id as string;
-        session.user.role = token.role as string;
+        session.user.role = token.role;
+        session.user.id = token.id;
       }
       return session;
     },
   },
   pages: {
     signIn: "/auth/signin",
+    signOut: "/auth/signout",
+    error: "/auth/error",
   },
   secret: process.env.NEXTAUTH_SECRET,
 };
