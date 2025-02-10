@@ -3,31 +3,130 @@
 @tailwind utilities;
 
 :root {
-  --foreground-rgb: 0, 0, 0;
-  --background-start-rgb: 214, 219, 220;
-  --background-end-rgb: 255, 255, 255;
+  --neon-pink: #ff6ac1;
+  --neon-cyan: #03ffff;
+  --neon-blue: #2f4efd;
+  --neon-purple: #8231b4;
+  --neon-yellow: #ffff00;
+  --neon-green: #3ed83e;
+  --primary: hsl(217.2, 91.2%, 59.8%);
+  --secondary: hsl(217.2, 32.6%, 17.5%);
+  --background: hsl(222, 58%, 10%);
+  --foreground: hsl(210, 40%, 98%);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --foreground-rgb: 255, 255, 255;
-    --background-start-rgb: 0, 0, 0;
-    --background-end-rgb: 0, 0, 0;
+@layer base {
+  body {
+    @apply bg-background text-foreground;
   }
 }
 
-body {
-  color: rgb(var(--foreground-rgb));
-  background: linear-gradient(
-      to bottom,
-      transparent,
-      rgb(var(--background-end-rgb))
-    )
-    rgb(var(--background-start-rgb));
+@layer components {
+  .neon-border {
+    @apply border-2 border-neon-blue shadow-neon;
+  }
+
+  .neon-text {
+    @apply text-neon-pink font-bold;
+  }
+
+  .neon-button {
+    @apply bg-neon-pink text-white font-bold py-2 px-4 rounded-md shadow-neon hover:bg-neon-blue hover:text-black transition-all duration-300;
+  }
+
+  .card {
+    @apply border-2 border-neon-blue bg-secondary p-6 rounded-lg hover:shadow-neon-lg transition-all duration-300;
+  }
+
+  .card-title {
+    @apply text-2xl font-bold mb-4 text-neon-blue;
+  }
+
+  .card-content {
+    @apply text-foreground;
+  }
 }
 
 @layer utilities {
-  .text-balance {
-    text-wrap: balance;
+  .animate-pulse-neon {
+    animation: pulse-neon 1.5s infinite alternate;
+    
+  }
+
+  @keyframes pulse-neon {
+    0% {
+      box-shadow: 0 0 5px var(--neon-pink), 0 0 10px var(--neon-pink);
+    }
+
+    100% {
+      box-shadow: 0 0 20px var(--neon-pink), 0 0 40px var(--neon-pink);
+    }
+  }
+
+  .shadow-neon {
+    box-shadow: 0 0 5px var(--neon-blue), 0 0 10px var(--neon-blue);
+  }
+
+  .shadow-neon-lg {
+    box-shadow: 0 0 10px var(--neon-blue), 0 0 20px var(--neon-blue);
+  }
+
+  /* Neon text glow effects */
+  .glow-text-subtle {
+    text-shadow: 0 0 5px currentColor;
+  }
+  .glow-text-blue {
+    text-shadow: 0 0 10px var(--neon-blue), 0 0 20px var(--neon-blue), 0 0 30px var(--neon-blue);
+  }
+
+  .glow-text-pink {
+    text-shadow: 0 0 10px var(--neon-pink), 0 0 20px var(--neon-pink), 0 0 30px var(--neon-pink);
+  }
+
+  .glow-text-purple {
+    text-shadow: 0 0 10px var(--neon-purple), 0 0 20px var(--neon-purple), 0 0 30px var(--neon-purple);
+  }
+
+  .glow-text-yellow {
+    text-shadow: 0 0 10px var(--neon-yellow), 0 0 20px var(--neon-yellow), 0 0 30px var(--neon-yellow);
+  }
+
+  /* Neon box shadow effects */
+  .shadow-neon-blue {
+    box-shadow: 0 0 5px var(--neon-blue), 0 0 10px var(--neon-blue);
+  }
+
+  .shadow-neon-pink {
+    box-shadow: 0 0 5px var(--neon-pink), 0 0 10px var(--neon-pink);
+  }
+
+  .shadow-neon-purple {
+    box-shadow: 0 0 5px var(--neon-purple), 0 0 10px var(--neon-purple);
+  }
+
+  .shadow-neon-yellow {
+    box-shadow: 0 0 5px var(--neon-yellow), 0 0 10px var(--neon-yellow);
+  }
+
+  /* Animation for glowing borders */
+  @keyframes glow {
+    0% {
+      box-shadow: 0 0 5px var(--neon-blue);
+    }
+
+    50% {
+      box-shadow: 0 0 20px var(--neon-blue), 0 0 30px var(--neon-blue);
+    }
+
+    100% {
+      box-shadow: 0 0 5px var(--neon-blue);
+    }
+  }
+  .title-glow {
+    text-shadow: 0 0 10px var(--neon-pink);
+  }
+  .animate-glow {
+    animation: glow 2s infinite;
   }
 }
+
