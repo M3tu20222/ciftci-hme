@@ -1,225 +1,337 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { PlusCircle, Pencil } from "lucide-react"
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Button } from "@/components/ui/button"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import { Label } from "@/components/ui/label"
+import { useState, useEffect } from "react";
+import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
+import Layout from "../components/Layout";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Card,
+  CardContent,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { PlusCircle, Pencil, Trash2 } from "lucide-react";
+import { useToast } from "@/components/ui/use-toast";
+import { Toaster } from "@/components/ui/toaster";
 
-// Envanter verisi (gerçek uygulamada bu veri bir API'den gelecektir)
-const initialInventory = [
-  {
-    id: 1,
-    name: "Tümosan 9115",
-    category: "Kalıcı Malzeme",
-    subCategory: "Traktör",
-    owners: ["Ahmet 50%", "Mehmet 50%"],
-    quantity: 1,
-    unit: "Adet",
-    currentValue: "1000000",
-    fuelConsumption: "-",
-  },
-  {
-    id: 2,
-    name: "Diskaro",
-    category: "Traktör Malzemesi",
-    subCategory: "Tarla İşleme",
-    owners: ["Ayşe 100%"],
-    quantity: 1,
-    unit: "Adet",
-    currentValue: "100000",
-    fuelConsumption: "1",
-  },
-  // Diğer envanter öğeleri buraya eklenebilir
-]
+interface EnvanterItem {
+  _id: string;
+  name: string;
+  category: string;
+  subCategory: string;
+  owners: string[];
+  quantity: number;
+  unit: string;
+  currentValue: number;
+  fuelConsumption: number;
+}
 
-export default function InventoryManagementPage() {
-  const [inventory, setInventory] = useState(initialInventory)
-  const [searchTerm, setSearchTerm] = useState("")
-  const [categoryFilter, setCategoryFilter] = useState("all")
-  const [editingItem, setEditingItem] = useState(null)
-  const [newItem, setNewItem] = useState({
+export default function EnvanterYonetimiPage() {
+  const [envanterItems, setEnvanterItems] = useState<EnvanterItem[]>([]);
+  const [editingItem, setEditingItem] = useState<EnvanterItem | null>(null);
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [newItem, setNewItem] = useState<Partial<EnvanterItem>>({
     name: "",
     category: "",
     subCategory: "",
-    owners: "",
-    quantity: 1,
-    unit: "Adet",
-    currentValue: "",
-    fuelConsumption: "",
-  })
+    owners: [],
+    quantity: 0,
+    unit: "",
+    currentValue: 0,
+    fuelConsumption: 0,
+  });
+  const { data: session, status } = useSession();
+  const router = useRouter();
+  const { toast } = useToast();
 
-  const categories = Array.from(new Set(inventory.map((item) => item.category)))
-
-  const filteredInventory = inventory.filter(
-    (item) =>
-      item.name.toLowerCase().includes(searchTerm.toLowerCase()) &&
-      (categoryFilter === "all" || item.category === categoryFilter),
-  )
-
-  const handleAddItem = (e) => {
-    e.preventDefault()
-    const itemToAdd = {
-      ...newItem,
-      id: inventory.length + 1,
-      owners: newItem.owners.split(",").map((owner) => owner.trim()),
+  useEffect(() => {
+    if (status === "loading") return;
+    if (!session) {
+      router.push("/auth/signin");
+      return;
     }
-    setInventory([...inventory, itemToAdd])
-    setNewItem({
-      name: "",
-      category: "",
-      subCategory: "",
-      owners: "",
-      quantity: 1,
-      unit: "Adet",
-      currentValue: "",
-      fuelConsumption: "",
-    })
-  }
+    fetchEnvanterItems();
+  }, [session, status, router]);
 
-  const handleEditItem = (e) => {
-    e.preventDefault()
-    const updatedInventory = inventory.map((item) =>
-      item.id === editingItem.id ? { ...editingItem, owners: editingItem.owners.join(", ") } : item,
-    )
-    setInventory(updatedInventory)
-    setEditingItem(null)
-  }
+  const fetchEnvanterItems = async () => {
+    try {
+      const response = await fetch("/api/envanter");
+      if (!response.ok) {
+        throw new Error("Envanter öğelerini getirme hatası");
+      }
+      const data = await response.json();
+      setEnvanterItems(data);
+    } catch (error) {
+      console.error("Envanter öğelerini getirme hatası:", error);
+      toast({
+        title: "Hata",
+        description: "Envanter öğelerini getirirken bir hata oluştu.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleAddItem = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const response = await fetch("/api/envanter", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(newItem),
+      });
+      if (!response.ok) throw new Error("Envanter öğesi ekleme hatası");
+      await fetchEnvanterItems();
+      setNewItem({
+        name: "",
+        category: "",
+        subCategory: "",
+        owners: [],
+        quantity: 0,
+        unit: "",
+        currentValue: 0,
+        fuelConsumption: 0,
+      });
+      setIsAddDialogOpen(false);
+      toast({
+        title: "Başarılı",
+        description: "Yeni envanter öğesi başarıyla eklendi.",
+      });
+    } catch (error) {
+      console.error("Envanter öğesi ekleme hatası:", error);
+      toast({
+        title: "Hata",
+        description: "Envanter öğesi eklenirken bir hata oluştu.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleEditItem = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingItem) return;
+    try {
+      const response = await fetch(`/api/envanter/${editingItem._id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(editingItem),
+      });
+      if (!response.ok) throw new Error("Envanter öğesi güncelleme hatası");
+      await fetchEnvanterItems();
+      setEditingItem(null);
+      toast({
+        title: "Başarılı",
+        description: "Envanter öğesi başarıyla güncellendi.",
+      });
+    } catch (error) {
+      console.error("Envanter öğesi güncelleme hatası:", error);
+      toast({
+        title: "Hata",
+        description: "Envanter öğesi güncellenirken bir hata oluştu.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDeleteItem = async (id: string) => {
+    if (!confirm("Bu envanter öğesini silmek istediğinizden emin misiniz?"))
+      return;
+    try {
+      const response = await fetch(`/api/envanter/${id}`, {
+        method: "DELETE",
+      });
+      if (!response.ok) throw new Error("Envanter öğesi silme hatası");
+      await fetchEnvanterItems();
+      toast({
+        title: "Başarılı",
+        description: "Envanter öğesi başarıyla silindi.",
+      });
+    } catch (error) {
+      console.error("Envanter öğesi silme hatası:", error);
+      toast({
+        title: "Hata",
+        description: "Envanter öğesi silinirken bir hata oluştu.",
+        variant: "destructive",
+      });
+    }
+  };
 
   return (
+    <Layout>
       <div className="container mx-auto p-4 space-y-6">
-        <h1 className="text-4xl font-bold text-center mb-8 text-neon-pink title-glow">Envanter Yönetimi</h1>
+        <h1 className="text-4xl font-bold text-center mb-8 text-neon-green title-glow">
+          Envanter Yönetimi
+        </h1>
 
-        <div className="flex justify-between items-center mb-4">
-          <Input
-            type="text"
-            placeholder="Envanter ara..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-1/3 bg-gray-800 text-neon-blue placeholder-neon-blue/50 border-neon-blue focus:ring-neon-green"
-          />
-          <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-            <SelectTrigger className="w-[200px] bg-gray-800 text-neon-green border-neon-green">
-              <SelectValue placeholder="Kategori Filtrele" />
-            </SelectTrigger>
-            <SelectContent className="bg-gray-800 text-neon-green border-neon-green">
-              <SelectItem value="all">Tümü</SelectItem>
-              {categories.map((category) => (
-                <SelectItem key={category} value={category}>
-                  {category}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Dialog>
+        <div className="flex justify-end mb-4">
+          <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
             <DialogTrigger asChild>
               <Button className="bg-neon-purple hover:bg-neon-pink text-white">
                 <PlusCircle className="mr-2 h-4 w-4" /> Yeni Öğe Ekle
               </Button>
             </DialogTrigger>
-            <DialogContent className="bg-gray-900 border-2 border-neon-blue">
+            <DialogContent className="bg-gray-900 border-2 border-neon-green">
               <DialogHeader>
-                <DialogTitle className="text-2xl font-bold text-neon-blue">Yeni Envanter Öğesi Ekle</DialogTitle>
+                <DialogTitle className="text-2xl font-bold text-neon-green">
+                  Yeni Envanter Öğesi Ekle
+                </DialogTitle>
               </DialogHeader>
               <form onSubmit={handleAddItem}>
                 <div className="grid gap-4 py-4">
                   <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="name" className="text-right text-neon-green">
-                      İsim
+                    <Label htmlFor="name" className="text-right text-neon-blue">
+                      Ad
                     </Label>
                     <Input
                       id="name"
                       value={newItem.name}
-                      onChange={(e) => setNewItem({ ...newItem, name: e.target.value })}
-                      className="col-span-3 bg-gray-800 text-neon-blue border-neon-blue"
+                      onChange={(e) =>
+                        setNewItem({ ...newItem, name: e.target.value })
+                      }
+                      className="col-span-3 bg-gray-800 text-neon-pink border-neon-blue"
                     />
                   </div>
                   <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="category" className="text-right text-neon-green">
+                    <Label
+                      htmlFor="category"
+                      className="text-right text-neon-blue"
+                    >
                       Kategori
                     </Label>
                     <Input
                       id="category"
                       value={newItem.category}
-                      onChange={(e) => setNewItem({ ...newItem, category: e.target.value })}
-                      className="col-span-3 bg-gray-800 text-neon-blue border-neon-blue"
+                      onChange={(e) =>
+                        setNewItem({ ...newItem, category: e.target.value })
+                      }
+                      className="col-span-3 bg-gray-800 text-neon-pink border-neon-blue"
                     />
                   </div>
                   <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="subCategory" className="text-right text-neon-green">
+                    <Label
+                      htmlFor="subCategory"
+                      className="text-right text-neon-blue"
+                    >
                       Alt Kategori
                     </Label>
                     <Input
                       id="subCategory"
                       value={newItem.subCategory}
-                      onChange={(e) => setNewItem({ ...newItem, subCategory: e.target.value })}
-                      className="col-span-3 bg-gray-800 text-neon-blue border-neon-blue"
+                      onChange={(e) =>
+                        setNewItem({ ...newItem, subCategory: e.target.value })
+                      }
+                      className="col-span-3 bg-gray-800 text-neon-pink border-neon-blue"
                     />
                   </div>
                   <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="owners" className="text-right text-neon-green">
+                    <Label
+                      htmlFor="owners"
+                      className="text-right text-neon-blue"
+                    >
                       Sahipler
                     </Label>
                     <Input
                       id="owners"
-                      value={newItem.owners}
-                      onChange={(e) => setNewItem({ ...newItem, owners: e.target.value })}
-                      className="col-span-3 bg-gray-800 text-neon-blue border-neon-blue"
-                      placeholder="Örn: Ahmet 50%, Mehmet 50%"
+                      value={newItem.owners?.join(", ")}
+                      onChange={(e) =>
+                        setNewItem({
+                          ...newItem,
+                          owners: e.target.value.split(", "),
+                        })
+                      }
+                      className="col-span-3 bg-gray-800 text-neon-pink border-neon-blue"
                     />
                   </div>
                   <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="quantity" className="text-right text-neon-green">
+                    <Label
+                      htmlFor="quantity"
+                      className="text-right text-neon-blue"
+                    >
                       Miktar
                     </Label>
                     <Input
                       id="quantity"
                       type="number"
                       value={newItem.quantity}
-                      onChange={(e) => setNewItem({ ...newItem, quantity: Number.parseInt(e.target.value) })}
-                      className="col-span-3 bg-gray-800 text-neon-blue border-neon-blue"
+                      onChange={(e) =>
+                        setNewItem({
+                          ...newItem,
+                          quantity: Number(e.target.value),
+                        })
+                      }
+                      className="col-span-3 bg-gray-800 text-neon-pink border-neon-blue"
                     />
                   </div>
                   <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="unit" className="text-right text-neon-green">
+                    <Label htmlFor="unit" className="text-right text-neon-blue">
                       Birim
                     </Label>
                     <Input
                       id="unit"
                       value={newItem.unit}
-                      onChange={(e) => setNewItem({ ...newItem, unit: e.target.value })}
-                      className="col-span-3 bg-gray-800 text-neon-blue border-neon-blue"
+                      onChange={(e) =>
+                        setNewItem({ ...newItem, unit: e.target.value })
+                      }
+                      className="col-span-3 bg-gray-800 text-neon-pink border-neon-blue"
                     />
                   </div>
                   <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="currentValue" className="text-right text-neon-green">
-                      Mevcut Değer (TL)
+                    <Label
+                      htmlFor="currentValue"
+                      className="text-right text-neon-blue"
+                    >
+                      Mevcut Değer
                     </Label>
                     <Input
                       id="currentValue"
                       type="number"
                       value={newItem.currentValue}
-                      onChange={(e) => setNewItem({ ...newItem, currentValue: e.target.value })}
-                      className="col-span-3 bg-gray-800 text-neon-blue border-neon-blue"
+                      onChange={(e) =>
+                        setNewItem({
+                          ...newItem,
+                          currentValue: Number(e.target.value),
+                        })
+                      }
+                      className="col-span-3 bg-gray-800 text-neon-pink border-neon-blue"
                     />
                   </div>
                   <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="fuelConsumption" className="text-right text-neon-green">
-                      Yakıt Tüketimi (L/Dekar)
+                    <Label
+                      htmlFor="fuelConsumption"
+                      className="text-right text-neon-blue"
+                    >
+                      Yakıt Tüketimi
                     </Label>
                     <Input
                       id="fuelConsumption"
+                      type="number"
                       value={newItem.fuelConsumption}
-                      onChange={(e) => setNewItem({ ...newItem, fuelConsumption: e.target.value })}
-                      className="col-span-3 bg-gray-800 text-neon-blue border-neon-blue"
+                      onChange={(e) =>
+                        setNewItem({
+                          ...newItem,
+                          fuelConsumption: Number(e.target.value),
+                        })
+                      }
+                      className="col-span-3 bg-gray-800 text-neon-pink border-neon-blue"
                     />
                   </div>
                 </div>
                 <DialogFooter>
-                  <Button type="submit" className="bg-neon-green hover:bg-neon-blue text-black">
+                  <Button
+                    type="submit"
+                    className="bg-neon-green hover:bg-neon-blue text-black"
+                  >
                     Ekle
                   </Button>
                 </DialogFooter>
@@ -229,95 +341,126 @@ export default function InventoryManagementPage() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filteredInventory.map((item) => (
+          {envanterItems.map((item) => (
             <Card
-              key={item.id}
-              className="bg-gray-800 border-2 border-neon-blue shadow-lg hover:shadow-neon-blue transition-shadow duration-300"
+              key={item._id}
+              className="bg-gray-800 border-2 border-neon-green shadow-lg hover:shadow-neon-green transition-shadow duration-300"
             >
               <CardHeader>
                 <CardTitle className="text-neon-pink">{item.name}</CardTitle>
               </CardHeader>
               <CardContent className="space-y-2">
                 <p className="text-neon-blue">
-                  Kategori: <span className="text-neon-green">{item.category}</span>
+                  Kategori:{" "}
+                  <span className="text-neon-pink">{item.category}</span>
                 </p>
                 <p className="text-neon-blue">
-                  Alt Kategori: <span className="text-neon-green">{item.subCategory}</span>
+                  Alt Kategori:{" "}
+                  <span className="text-neon-pink">{item.subCategory}</span>
                 </p>
-                <p className="text-neon-yellow">
-                  Sahipler: <span className="text-neon-cyan">{item.owners.join(", ")}</span>
-                </p>
-                <p className="text-neon-purple">
-                  Miktar:{" "}
+                <p className="text-neon-blue">
+                  Sahipler:{" "}
                   <span className="text-neon-pink">
-                    {item.quantity} {item.unit}
+                    {item.owners.join(", ")}
                   </span>
+                </p>
+                <p className="text-neon-blue">
+                  Miktar:{" "}
+                  <span className="text-neon-pink">{item.quantity}</span>
+                </p>
+                <p className="text-neon-blue">
+                  Birim: <span className="text-neon-pink">{item.unit}</span>
                 </p>
                 <p className="text-neon-blue">
                   Mevcut Değer:{" "}
-                  <span className="text-neon-green">
-                    {Number.parseInt(item.currentValue).toLocaleString("tr-TR")} TL
-                  </span>
+                  <span className="text-neon-pink">{item.currentValue}</span>
                 </p>
-                <p className="text-neon-yellow">
+                <p className="text-neon-blue">
                   Yakıt Tüketimi:{" "}
-                  <span className="text-neon-cyan">
-                    {item.fuelConsumption === "-" ? "-" : `${item.fuelConsumption} L/Dekar`}
-                  </span>
+                  <span className="text-neon-pink">{item.fuelConsumption}</span>
                 </p>
               </CardContent>
-              <CardFooter>
+              <CardFooter className="space-x-2">
                 <Dialog>
                   <DialogTrigger asChild>
                     <Button
-                      className="w-full bg-neon-cyan hover:bg-neon-blue text-black"
+                      className="bg-neon-cyan hover:bg-neon-blue text-black"
                       onClick={() => setEditingItem(item)}
                     >
                       <Pencil className="mr-2 h-4 w-4" /> Düzenle
                     </Button>
                   </DialogTrigger>
-                  <DialogContent className="bg-gray-900 border-2 border-neon-blue">
+                  <DialogContent className="bg-gray-900 border-2 border-neon-green">
                     <DialogHeader>
-                      <DialogTitle className="text-2xl font-bold text-neon-blue">Envanter Öğesini Düzenle</DialogTitle>
+                      <DialogTitle className="text-2xl font-bold text-neon-green">
+                        Envanter Öğesi Düzenle
+                      </DialogTitle>
                     </DialogHeader>
                     {editingItem && (
                       <form onSubmit={handleEditItem}>
                         <div className="grid gap-4 py-4">
                           <div className="grid grid-cols-4 items-center gap-4">
-                            <Label htmlFor="edit-name" className="text-right text-neon-green">
-                              İsim
+                            <Label
+                              htmlFor="edit-name"
+                              className="text-right text-neon-blue"
+                            >
+                              Ad
                             </Label>
                             <Input
                               id="edit-name"
                               value={editingItem.name}
-                              onChange={(e) => setEditingItem({ ...editingItem, name: e.target.value })}
-                              className="col-span-3 bg-gray-800 text-neon-blue border-neon-blue"
+                              onChange={(e) =>
+                                setEditingItem({
+                                  ...editingItem,
+                                  name: e.target.value,
+                                })
+                              }
+                              className="col-span-3 bg-gray-800 text-neon-pink border-neon-blue"
                             />
                           </div>
                           <div className="grid grid-cols-4 items-center gap-4">
-                            <Label htmlFor="edit-category" className="text-right text-neon-green">
+                            <Label
+                              htmlFor="edit-category"
+                              className="text-right text-neon-blue"
+                            >
                               Kategori
                             </Label>
                             <Input
                               id="edit-category"
                               value={editingItem.category}
-                              onChange={(e) => setEditingItem({ ...editingItem, category: e.target.value })}
-                              className="col-span-3 bg-gray-800 text-neon-blue border-neon-blue"
+                              onChange={(e) =>
+                                setEditingItem({
+                                  ...editingItem,
+                                  category: e.target.value,
+                                })
+                              }
+                              className="col-span-3 bg-gray-800 text-neon-pink border-neon-blue"
                             />
                           </div>
                           <div className="grid grid-cols-4 items-center gap-4">
-                            <Label htmlFor="edit-subCategory" className="text-right text-neon-green">
+                            <Label
+                              htmlFor="edit-subCategory"
+                              className="text-right text-neon-blue"
+                            >
                               Alt Kategori
                             </Label>
                             <Input
                               id="edit-subCategory"
                               value={editingItem.subCategory}
-                              onChange={(e) => setEditingItem({ ...editingItem, subCategory: e.target.value })}
-                              className="col-span-3 bg-gray-800 text-neon-blue border-neon-blue"
+                              onChange={(e) =>
+                                setEditingItem({
+                                  ...editingItem,
+                                  subCategory: e.target.value,
+                                })
+                              }
+                              className="col-span-3 bg-gray-800 text-neon-pink border-neon-blue"
                             />
                           </div>
                           <div className="grid grid-cols-4 items-center gap-4">
-                            <Label htmlFor="edit-owners" className="text-right text-neon-green">
+                            <Label
+                              htmlFor="edit-owners"
+                              className="text-right text-neon-blue"
+                            >
                               Sahipler
                             </Label>
                             <Input
@@ -326,15 +469,17 @@ export default function InventoryManagementPage() {
                               onChange={(e) =>
                                 setEditingItem({
                                   ...editingItem,
-                                  owners: e.target.value.split(",").map((owner) => owner.trim()),
+                                  owners: e.target.value.split(", "),
                                 })
                               }
-                              className="col-span-3 bg-gray-800 text-neon-blue border-neon-blue"
-                              placeholder="Örn: Ahmet 50%, Mehmet 50%"
+                              className="col-span-3 bg-gray-800 text-neon-pink border-neon-blue"
                             />
                           </div>
                           <div className="grid grid-cols-4 items-center gap-4">
-                            <Label htmlFor="edit-quantity" className="text-right text-neon-green">
+                            <Label
+                              htmlFor="edit-quantity"
+                              className="text-right text-neon-blue"
+                            >
                               Miktar
                             </Label>
                             <Input
@@ -342,60 +487,98 @@ export default function InventoryManagementPage() {
                               type="number"
                               value={editingItem.quantity}
                               onChange={(e) =>
-                                setEditingItem({ ...editingItem, quantity: Number.parseInt(e.target.value) })
+                                setEditingItem({
+                                  ...editingItem,
+                                  quantity: Number(e.target.value),
+                                })
                               }
-                              className="col-span-3 bg-gray-800 text-neon-blue border-neon-blue"
+                              className="col-span-3 bg-gray-800 text-neon-pink border-neon-blue"
                             />
                           </div>
                           <div className="grid grid-cols-4 items-center gap-4">
-                            <Label htmlFor="edit-unit" className="text-right text-neon-green">
+                            <Label
+                              htmlFor="edit-unit"
+                              className="text-right text-neon-blue"
+                            >
                               Birim
                             </Label>
                             <Input
                               id="edit-unit"
                               value={editingItem.unit}
-                              onChange={(e) => setEditingItem({ ...editingItem, unit: e.target.value })}
-                              className="col-span-3 bg-gray-800 text-neon-blue border-neon-blue"
+                              onChange={(e) =>
+                                setEditingItem({
+                                  ...editingItem,
+                                  unit: e.target.value,
+                                })
+                              }
+                              className="col-span-3 bg-gray-800 text-neon-pink border-neon-blue"
                             />
                           </div>
                           <div className="grid grid-cols-4 items-center gap-4">
-                            <Label htmlFor="edit-currentValue" className="text-right text-neon-green">
-                              Mevcut Değer (TL)
+                            <Label
+                              htmlFor="edit-currentValue"
+                              className="text-right text-neon-blue"
+                            >
+                              Mevcut Değer
                             </Label>
                             <Input
                               id="edit-currentValue"
                               type="number"
                               value={editingItem.currentValue}
-                              onChange={(e) => setEditingItem({ ...editingItem, currentValue: e.target.value })}
-                              className="col-span-3 bg-gray-800 text-neon-blue border-neon-blue"
+                              onChange={(e) =>
+                                setEditingItem({
+                                  ...editingItem,
+                                  currentValue: Number(e.target.value),
+                                })
+                              }
+                              className="col-span-3 bg-gray-800 text-neon-pink border-neon-blue"
                             />
                           </div>
                           <div className="grid grid-cols-4 items-center gap-4">
-                            <Label htmlFor="edit-fuelConsumption" className="text-right text-neon-green">
-                              Yakıt Tüketimi (L/Dekar)
+                            <Label
+                              htmlFor="edit-fuelConsumption"
+                              className="text-right text-neon-blue"
+                            >
+                              Yakıt Tüketimi
                             </Label>
                             <Input
                               id="edit-fuelConsumption"
+                              type="number"
                               value={editingItem.fuelConsumption}
-                              onChange={(e) => setEditingItem({ ...editingItem, fuelConsumption: e.target.value })}
-                              className="col-span-3 bg-gray-800 text-neon-blue border-neon-blue"
+                              onChange={(e) =>
+                                setEditingItem({
+                                  ...editingItem,
+                                  fuelConsumption: Number(e.target.value),
+                                })
+                              }
+                              className="col-span-3 bg-gray-800 text-neon-pink border-neon-blue"
                             />
                           </div>
                         </div>
                         <DialogFooter>
-                          <Button type="submit" className="bg-neon-green hover:bg-neon-blue text-black">
-                            Kaydet
+                          <Button
+                            type="submit"
+                            className="bg-neon-green hover:bg-neon-blue text-black"
+                          >
+                            Güncelle
                           </Button>
                         </DialogFooter>
                       </form>
                     )}
                   </DialogContent>
                 </Dialog>
+                <Button
+                  className="bg-neon-red hover:bg-neon-pink text-white"
+                  onClick={() => handleDeleteItem(item._id)}
+                >
+                  <Trash2 className="mr-2 h-4 w-4" /> Sil
+                </Button>
               </CardFooter>
             </Card>
           ))}
         </div>
       </div>
-  )
+      <Toaster />
+    </Layout>
+  );
 }
-
