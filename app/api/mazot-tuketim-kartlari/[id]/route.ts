@@ -1,34 +1,35 @@
 import { NextResponse } from "next/server";
-import dbConnect from "@/lib/mongodb";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 import MazotTuketimKarti from "@/models/MazotTuketimKarti";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import dbConnect from "@/lib/mongodb";
 
 export async function GET(
   request: Request,
   { params }: { params: { id: string } }
 ) {
+  const session = await getServerSession(authOptions);
+
+  if (!session) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  await dbConnect();
+
   try {
-    await dbConnect();
-    const session = await getServerSession(authOptions);
-
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const mazotTuketimKarti = await MazotTuketimKarti.findById(params.id);
+    const mazotTuketimKarti = await MazotTuketimKarti.findById(
+      params.id
+    ).populate("tarla_id");
     if (!mazotTuketimKarti) {
       return NextResponse.json(
-        { error: "Mazot Tüketim Kartı bulunamadı" },
+        { error: "Mazot tüketim kartı bulunamadı" },
         { status: 404 }
       );
     }
     return NextResponse.json(mazotTuketimKarti);
   } catch (error) {
-    return NextResponse.json(
-      { error: "Internal Server Error" },
-      { status: 500 }
-    );
+    console.error("Mazot tüketim kartı getirme hatası:", error);
+    return NextResponse.json({ error: "Sunucu hatası" }, { status: 500 });
   }
 }
 
@@ -36,32 +37,31 @@ export async function PUT(
   request: Request,
   { params }: { params: { id: string } }
 ) {
+  const session = await getServerSession(authOptions);
+
+  if (!session) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  await dbConnect();
+
   try {
-    await dbConnect();
-    const session = await getServerSession(authOptions);
-
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const data = await request.json();
-    const mazotTuketimKarti = await MazotTuketimKarti.findByIdAndUpdate(
+    const body = await request.json();
+    const updatedMazotTuketimKarti = await MazotTuketimKarti.findByIdAndUpdate(
       params.id,
-      data,
+      body,
       { new: true }
     );
-    if (!mazotTuketimKarti) {
+    if (!updatedMazotTuketimKarti) {
       return NextResponse.json(
-        { error: "Mazot Tüketim Kartı bulunamadı" },
+        { error: "Mazot tüketim kartı bulunamadı" },
         { status: 404 }
       );
     }
-    return NextResponse.json(mazotTuketimKarti);
+    return NextResponse.json(updatedMazotTuketimKarti);
   } catch (error) {
-    return NextResponse.json(
-      { error: "Internal Server Error" },
-      { status: 500 }
-    );
+    console.error("Mazot tüketim kartı güncelleme hatası:", error);
+    return NextResponse.json({ error: "Sunucu hatası" }, { status: 500 });
   }
 }
 
@@ -69,30 +69,29 @@ export async function DELETE(
   request: Request,
   { params }: { params: { id: string } }
 ) {
+  const session = await getServerSession(authOptions);
+
+  if (!session) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  await dbConnect();
+
   try {
-    await dbConnect();
-    const session = await getServerSession(authOptions);
-
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const mazotTuketimKarti = await MazotTuketimKarti.findByIdAndDelete(
+    const deletedMazotTuketimKarti = await MazotTuketimKarti.findByIdAndDelete(
       params.id
     );
-    if (!mazotTuketimKarti) {
+    if (!deletedMazotTuketimKarti) {
       return NextResponse.json(
-        { error: "Mazot Tüketim Kartı bulunamadı" },
+        { error: "Mazot tüketim kartı bulunamadı" },
         { status: 404 }
       );
     }
     return NextResponse.json({
-      message: "Mazot Tüketim Kartı başarıyla silindi",
+      message: "Mazot tüketim kartı başarıyla silindi",
     });
   } catch (error) {
-    return NextResponse.json(
-      { error: "Internal Server Error" },
-      { status: 500 }
-    );
+    console.error("Mazot tüketim kartı silme hatası:", error);
+    return NextResponse.json({ error: "Sunucu hatası" }, { status: 500 });
   }
 }
