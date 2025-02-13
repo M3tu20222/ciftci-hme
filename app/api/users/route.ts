@@ -15,7 +15,14 @@ export async function GET(request: Request) {
 
     await dbConnect();
 
-    const users = await User.find({}).select("-password");
+    // Get the role from query parameters
+    const { searchParams } = new URL(request.url);
+    const role = searchParams.get("role");
+
+    // If role is specified, filter by role
+    const query = role ? { role } : {};
+
+    const users = await User.find(query).select("-password");
     return NextResponse.json(users);
   } catch (error) {
     console.error("Error fetching users:", error);

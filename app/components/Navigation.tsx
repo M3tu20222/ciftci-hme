@@ -1,135 +1,61 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useSession, signOut } from "next-auth/react";
 import { cn } from "@/lib/utils";
-import {
-  ChevronLeft,
-  LayoutDashboard,
-  Box,
-  BadgeDollarSign,
-  Wheat,
-  Map,
-  Users,
-  Droplets,
-  ListTodo,
-} from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Menu, X } from "lucide-react";
 
-export function Navigation() {
-  const [isCollapsed, setIsCollapsed] = useState(false);
+const links = [
+  { href: "/", label: "Ana Sayfa" },
+  { href: "/tarlalar", label: "Tarlalar" },
+  { href: "/tarla-sahipler", label: "Tarla Sahipleri" },
+  { href: "/kuyular", label: "Kuyular" },
+  { href: "/sezonlar", label: "Sezonlar" },
+  { href: "/urunler", label: "Ürünler" },
+  { href: "/gubreler", label: "Gübreler" },
+  { href: "/gubre-stoklar", label: "Gübre Stokları" },
+  { href: "/envanter", label: "Envanter" },
+  { href: "/is-akisi", label: "İş Akışı" },
+  { href: "/mazot-tuketim-kartlari", label: "Mazot Tüketim Kartları" },
+  { href: "/kuyu-faturalar", label: "Kuyu Faturaları" },
+  { href: "/finans", label: "Finans" },
+  { href: "/kullanicilar", label: "Kullanıcılar" },
+];
+
+interface NavigationProps {
+  isOpen: boolean;
+  toggleSidebar: () => void;
+}
+
+export function Navigation({ isOpen, toggleSidebar }: NavigationProps) {
   const pathname = usePathname();
-  const { data: session } = useSession();
-
-  if (!session) return null;
-
-  const routes = [
-    {
-      label: "Ana Sayfa",
-      icon: LayoutDashboard,
-      href: "/",
-    },
-    {
-      label: "Envanter",
-      icon: Box,
-      href: "/envanter",
-    },
-    {
-      label: "Finans",
-      icon: BadgeDollarSign,
-      href: "/finans",
-    },
-    {
-      label: "Tarlalar",
-      icon: Wheat,
-      href: "/tarlalar",
-    },
-    {
-      label: "Plots",
-      icon: Map,
-      href: "/plots",
-    },
-    {
-      label: "Kullanıcılar",
-      icon: Users,
-      href: "/kullanicilar",
-    },
-    {
-      label: "Kuyular",
-      icon: Droplets,
-      href: "/kuyular",
-    },
-    {
-      label: "İş Akışı",
-      icon: ListTodo,
-      href: "/is-akisi",
-    },
-  ];
 
   return (
     <nav
       className={cn(
-        "relative h-screen border-r border-neon-blue bg-gray-900/95 pt-20 transition-all duration-300",
-        isCollapsed ? "w-16" : "w-64"
+        "fixed left-0 top-0 bottom-0 w-64 bg-gray-800 p-4 transition-transform duration-300 ease-in-out transform",
+        isOpen ? "translate-x-0" : "-translate-x-full"
       )}
     >
-      <Button
-        onClick={() => setIsCollapsed(!isCollapsed)}
-        variant="ghost"
-        className="absolute -right-3 top-20 h-6 w-6 rounded-full border border-neon-blue bg-gray-900 p-0 hover:bg-gray-800"
+      <button
+        onClick={toggleSidebar}
+        className="absolute top-4 right-4 text-neon-pink hover:text-neon-blue"
       >
-        <ChevronLeft
-          className={cn(
-            "h-4 w-4 text-neon-blue transition-all",
-            isCollapsed && "rotate-180"
-          )}
-        />
-      </Button>
-      <div className="space-y-4 px-2">
-        <div className="flex justify-between items-center px-3">
-          <div
-            className={cn("text-neon-pink font-bold", isCollapsed && "hidden")}
+        {isOpen ? <X size={24} /> : <Menu size={24} />}
+      </button>
+      <div className="mt-16 space-y-2">
+        {links.map((link) => (
+          <Link
+            key={link.href}
+            href={link.href}
+            className={cn(
+              "flex items-center px-3 py-2 text-lg transition-colors hover:text-neon-pink",
+              pathname === link.href ? "text-neon-green" : "text-gray-400"
+            )}
           >
-            Çiftçilik Sistemi
-          </div>
-        </div>
-        <div className="space-y-2">
-          {routes.map((route) => (
-            <Link
-              key={route.href}
-              href={route.href}
-              className={cn(
-                "flex items-center gap-x-2 rounded-lg px-3 py-2 text-sm transition-all hover:bg-gray-800",
-                pathname === route.href
-                  ? "bg-gray-800 text-neon-pink"
-                  : "text-neon-blue hover:text-neon-cyan",
-                isCollapsed && "justify-center"
-              )}
-            >
-              <route.icon
-                className={cn("h-5 w-5", isCollapsed ? "mr-0" : "mr-2")}
-              />
-              {!isCollapsed && <span>{route.label}</span>}
-            </Link>
-          ))}
-        </div>
-        {!isCollapsed && (
-          <div className="absolute bottom-4 left-0 right-0 px-3">
-            <div className="flex flex-col gap-2">
-              <span className="text-neon-green text-sm">
-                {session.user?.name}
-              </span>
-              <Button
-                onClick={() => signOut()}
-                className="w-full bg-neon-red text-gray-900 hover:bg-neon-pink transition-colors duration-300"
-              >
-                Çıkış Yap
-              </Button>
-            </div>
-          </div>
-        )}
+            {link.label}
+          </Link>
+        ))}
       </div>
     </nav>
   );

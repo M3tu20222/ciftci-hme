@@ -49,5 +49,7 @@ export default dbConnect;
 
 // Declare global mongoose cache
 declare global {
-  var mongoose: Cached | undefined;
+  var mongoose:
+    | { conn: typeof mongoose | null; promise: Promise<typeof mongoose> | null }
+    | undefined;
 }
