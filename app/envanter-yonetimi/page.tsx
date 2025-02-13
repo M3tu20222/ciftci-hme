@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Layout from "../components/Layout";
@@ -56,16 +56,7 @@ export default function EnvanterYonetimiPage() {
   const router = useRouter();
   const { toast } = useToast();
 
-  useEffect(() => {
-    if (status === "loading") return;
-    if (!session) {
-      router.push("/auth/signin");
-      return;
-    }
-    fetchEnvanterItems();
-  }, [session, status, router]);
-
-  const fetchEnvanterItems = async () => {
+  const fetchEnvanterItems = useCallback(async () => {
     try {
       const response = await fetch("/api/envanter");
       if (!response.ok) {
@@ -81,7 +72,16 @@ export default function EnvanterYonetimiPage() {
         variant: "destructive",
       });
     }
-  };
+  }, [toast]);
+
+  useEffect(() => {
+    if (status === "loading") return;
+    if (!session) {
+      router.push("/auth/signin");
+      return;
+    }
+    fetchEnvanterItems();
+  }, [session, status, router, fetchEnvanterItems]);
 
   const handleAddItem = async (e: React.FormEvent) => {
     e.preventDefault();
