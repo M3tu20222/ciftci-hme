@@ -3,9 +3,9 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import bcryptjs from "bcryptjs";
 import dbConnect from "@/lib/mongodb";
 import { User } from "@/models/User";
-import type { AuthOptions } from "next-auth";
+import type { NextAuthOptions } from "next-auth";
 
-export const authOptions: AuthOptions = {
+export const authOptions: NextAuthOptions = {
   providers: [
     CredentialsProvider({
       name: "Credentials",
@@ -44,14 +44,14 @@ export const authOptions: AuthOptions = {
     }),
   ],
   callbacks: {
-    async jwt({ token, user }: { token: any; user: any }) {
+    async jwt({ token, user }) {
       if (user) {
         token.id = user.id;
         token.role = user.role;
       }
       return token;
     },
-    async session({ session, token }: { session: any; token: any }) {
+    async session({ session, token }) {
       if (session.user) {
         session.user.id = token.id as string;
         session.user.role = token.role as string;
