@@ -1,97 +1,43 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "../../auth/[...nextauth]/route";
-import dbConnect from "@/lib/mongodb";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 import KuyuFatura from "@/models/KuyuFatura";
+import dbConnect from "@/lib/mongodb";
 
-export async function GET(
-  request: Request,
-  { params }: { params: { id: string } }
-) {
+export async function GET(request: Request) {
+  const session = await getServerSession(authOptions);
+
+  if (!session) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  await dbConnect();
+
   try {
-    await dbConnect();
-    const kuyuFatura = await KuyuFatura.findById(params.id).populate(
-      "kuyu_id",
-      "ad"
-    );
-    if (!kuyuFatura) {
-      return NextResponse.json(
-        { error: "Kuyu faturası bulunamadı" },
-        { status: 404 }
-      );
-    }
-    return NextResponse.json(kuyuFatura);
+    const kuyuFaturalar = await KuyuFatura.find({}).populate("kuyu_id");
+    return NextResponse.json(kuyuFaturalar);
   } catch (error) {
-    console.error("Kuyu faturası getirme hatası:", error);
-    return NextResponse.json(
-      { error: "Internal Server Error" },
-      { status: 500 }
-    );
+    console.error("Kuyu faturaları getirme hatası:", error);
+    return NextResponse.json({ error: "Sunucu hatası" }, { status: 500 });
   }
 }
 
-export async function PUT(
-  request: Request,
-  { params }: { params: { id: string } }
-) {
-  try {
-    const session = await getServerSession(authOptions);
-    if (!session || !session.user.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+export async function POST(request: Request) {
+  const session = await getServerSession(authOptions);
 
-    await dbConnect();
-    const { kuyu_id, baslangic_tarihi, bitis_tarihi, tutar, odendi } =
-      await request.json();
-    const updatedKuyuFatura = await KuyuFatura.findByIdAndUpdate(
-      params.id,
-      { kuyu_id, baslangic_tarihi, bitis_tarihi, tutar, odendi },
-      { new: true, runValidators: true }
-    );
-
-    if (!updatedKuyuFatura) {
-      return NextResponse.json(
-        { error: "Kuyu faturası bulunamadı" },
-        { status: 404 }
-      );
-    }
-
-    return NextResponse.json(updatedKuyuFatura);
-  } catch (error) {
-    console.error("Kuyu faturası güncelleme hatası:", error);
-    return NextResponse.json(
-      { error: "Internal Server Error" },
-      { status: 500 }
-    );
+  if (!session) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-}
 
-export async function DELETE(
-  request: Request,
-  { params }: { params: { id: string } }
-) {
+  await dbConnect();
+
   try {
-    const session = await getServerSession(authOptions);
-    if (!session || !session.user.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    await dbConnect();
-    const deletedKuyuFatura = await KuyuFatura.findByIdAndDelete(params.id);
-
-    if (!deletedKuyuFatura) {
-      return NextResponse.json(
-        { error: "Kuyu faturası bulunamadı" },
-        { status: 404 }
-      );
-    }
-
-    return NextResponse.json({ message: "Kuyu faturası başarıyla silindi" });
+    const body = await request.json();
+    const yeniKuyuFatura = new KuyuFatura(body);
+    await yeniKuyuFatura.save();
+    return NextResponse.json(yeniKuyuFatura, { status: 201 });
   } catch (error) {
-    console.error("Kuyu faturası silme hatası:", error);
-    return NextResponse.json(
-      { error: "Internal Server Error" },
-      { status: 500 }
-    );
+    console.error("Kuyu faturası ekleme hatası:", error);
+    return NextResponse.json({ error: "Sunucu hatası" }, { status: 500 });
   }
 }
