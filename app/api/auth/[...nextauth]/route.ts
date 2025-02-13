@@ -1,11 +1,12 @@
-import NextAuth, { type NextAuthOptions } from "next-auth";
+// app/api/auth/[...nextauth]/route.ts
+import NextAuth from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import bcryptjs from "bcryptjs";
 import dbConnect from "@/lib/mongodb";
 import { User } from "@/models/User";
 import type { JWT } from "next-auth/jwt";
 
-export const authOptions: NextAuthOptions = {
+const handler = NextAuth({
   providers: [
     CredentialsProvider({
       name: "Credentials",
@@ -20,18 +21,14 @@ export const authOptions: NextAuthOptions = {
 
         try {
           await dbConnect();
-
           const user = await User.findOne({ email: credentials.email });
-
           if (!user) {
             throw new Error("Geçersiz email veya şifre");
           }
-
           const isValid = await bcryptjs.compare(
             credentials.password,
             user.password
           );
-
           if (!isValid) {
             throw new Error("Geçersiz email veya şifre");
           }
@@ -71,8 +68,6 @@ export const authOptions: NextAuthOptions = {
     error: "/auth/error",
   },
   secret: process.env.NEXTAUTH_SECRET,
-};
-
-const handler = NextAuth(authOptions);
+});
 
 export { handler as GET, handler as POST };

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Layout from "../components/Layout";
@@ -73,18 +73,7 @@ export default function UsersPage() {
   const status = session.status;
   const router = useRouter();
 
-  useEffect(() => {
-    if (status === "loading") return;
-    if (!session.data || session.data.user?.role !== "admin") {
-      router.push("/");
-      return;
-    }
-    fetchUsers();
-    fetchTarlaSahipler();
-    fetchTarlalar();
-  }, [session, status, router]);
-
-  const fetchUsers = async () => {
+  const fetchUsers = useCallback(async () => {
     try {
       const response = await fetch("/api/users");
       if (!response.ok) throw new Error("Kullanıcıları getirme hatası");
@@ -98,9 +87,9 @@ export default function UsersPage() {
         variant: "destructive",
       });
     }
-  };
+  }, [toast]);
 
-  const fetchTarlaSahipler = async () => {
+  const fetchTarlaSahipler = useCallback(async () => {
     try {
       const response = await fetch("/api/tarla-sahipler");
       if (!response.ok) throw new Error("Tarla sahiplerini getirme hatası");
@@ -114,9 +103,9 @@ export default function UsersPage() {
         variant: "destructive",
       });
     }
-  };
+  }, [toast]);
 
-  const fetchTarlalar = async () => {
+  const fetchTarlalar = useCallback(async () => {
     try {
       const response = await fetch("/api/tarlalar");
       if (!response.ok) throw new Error("Tarlaları getirme hatası");
@@ -130,7 +119,18 @@ export default function UsersPage() {
         variant: "destructive",
       });
     }
-  };
+  }, [toast]);
+
+  useEffect(() => {
+    if (status === "loading") return;
+    if (!session.data || session.data.user?.role !== "admin") {
+      router.push("/");
+      return;
+    }
+    fetchUsers();
+    fetchTarlaSahipler();
+    fetchTarlalar();
+  }, [session, status, router, fetchUsers, fetchTarlaSahipler, fetchTarlalar]);
 
   const handleEditUser = async (e: React.FormEvent) => {
     e.preventDefault();
