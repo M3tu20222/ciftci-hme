@@ -1,14 +1,15 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "../../auth/[...nextauth]/route";
-import dbConnect from "@/lib/dbConnect";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 import TarlaSahip from "@/models/TarlaSahip";
+import dbConnect from "@/lib/mongodb";
 
 export async function GET(
   request: Request,
   { params }: { params: { id: string } }
 ) {
   const session = await getServerSession(authOptions);
+
   if (!session) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
@@ -16,22 +17,19 @@ export async function GET(
   await dbConnect();
 
   try {
-    const tarlaSahip = await TarlaSahip.findById(params.id)
-      .populate("tarla_id", "ad")
-      .populate("sahip_id", "ad")
-      .populate("created_by", "ad");
+    const tarlaSahip = await TarlaSahip.findById(params.id).populate(
+      "tarla_id sahip_id"
+    );
     if (!tarlaSahip) {
       return NextResponse.json(
-        { error: "Tarla Sahip not found" },
+        { error: "Tarla sahip ilişkisi bulunamadı" },
         { status: 404 }
       );
     }
     return NextResponse.json(tarlaSahip);
   } catch (error) {
-    return NextResponse.json(
-      { error: "Internal Server Error" },
-      { status: 500 }
-    );
+    console.error("Tarla sahip ilişkisi getirme hatası:", error);
+    return NextResponse.json({ error: "Sunucu hatası" }, { status: 500 });
   }
 }
 
@@ -40,6 +38,7 @@ export async function PUT(
   { params }: { params: { id: string } }
 ) {
   const session = await getServerSession(authOptions);
+
   if (!session) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
@@ -55,16 +54,14 @@ export async function PUT(
     );
     if (!updatedTarlaSahip) {
       return NextResponse.json(
-        { error: "Tarla Sahip not found" },
+        { error: "Tarla sahip ilişkisi bulunamadı" },
         { status: 404 }
       );
     }
     return NextResponse.json(updatedTarlaSahip);
   } catch (error) {
-    return NextResponse.json(
-      { error: "Internal Server Error" },
-      { status: 500 }
-    );
+    console.error("Tarla sahip ilişkisi güncelleme hatası:", error);
+    return NextResponse.json({ error: "Sunucu hatası" }, { status: 500 });
   }
 }
 
@@ -73,6 +70,7 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   const session = await getServerSession(authOptions);
+
   if (!session) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
@@ -83,15 +81,15 @@ export async function DELETE(
     const deletedTarlaSahip = await TarlaSahip.findByIdAndDelete(params.id);
     if (!deletedTarlaSahip) {
       return NextResponse.json(
-        { error: "Tarla Sahip not found" },
+        { error: "Tarla sahip ilişkisi bulunamadı" },
         { status: 404 }
       );
     }
-    return NextResponse.json({ message: "Tarla Sahip deleted successfully" });
+    return NextResponse.json({
+      message: "Tarla sahip ilişkisi başarıyla silindi",
+    });
   } catch (error) {
-    return NextResponse.json(
-      { error: "Internal Server Error" },
-      { status: 500 }
-    );
+    console.error("Tarla sahip ilişkisi silme hatası:", error);
+    return NextResponse.json({ error: "Sunucu hatası" }, { status: 500 });
   }
 }
