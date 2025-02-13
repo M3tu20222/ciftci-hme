@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
-import { authOptions } from "../../auth/[...nextauth]/route";
+import { authOptions } from "@/lib/auth";
 import Envanter from "@/models/Envanter";
 import dbConnect from "@/lib/mongodb";
 
@@ -8,25 +8,26 @@ export async function GET(
   request: Request,
   { params }: { params: { id: string } }
 ) {
+  const session = await getServerSession(authOptions);
+
+  if (!session) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  await dbConnect();
+
   try {
-    await dbConnect();
-    const envanterItem = await Envanter.findById(params.id).populate(
-      "sahipler.sahip",
-      "name"
-    );
-    if (!envanterItem) {
+    const envanter = await Envanter.findById(params.id);
+    if (!envanter) {
       return NextResponse.json(
-        { error: "Envanter öğesi bulunamadı" },
+        { error: "Envanter bulunamadı" },
         { status: 404 }
       );
     }
-    return NextResponse.json(envanterItem);
+    return NextResponse.json(envanter);
   } catch (error) {
-    console.error("Envanter öğesi getirme hatası:", error);
-    return NextResponse.json(
-      { error: "Internal Server Error" },
-      { status: 500 }
-    );
+    console.error("Envanter getirme hatası:", error);
+    return NextResponse.json({ error: "Sunucu hatası" }, { status: 500 });
   }
 }
 
@@ -34,37 +35,29 @@ export async function PUT(
   request: Request,
   { params }: { params: { id: string } }
 ) {
+  const session = await getServerSession(authOptions);
+
+  if (!session) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  await dbConnect();
+
   try {
-    const session = await getServerSession(authOptions);
-    if (!session || !session.user.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    await dbConnect();
-    const updatedData = await request.json();
-    const updatedEnvanterItem = await Envanter.findByIdAndUpdate(
-      params.id,
-      updatedData,
-      {
-        new: true,
-        runValidators: true,
-      }
-    );
-
-    if (!updatedEnvanterItem) {
+    const body = await request.json();
+    const updatedEnvanter = await Envanter.findByIdAndUpdate(params.id, body, {
+      new: true,
+    });
+    if (!updatedEnvanter) {
       return NextResponse.json(
-        { error: "Envanter öğesi bulunamadı" },
+        { error: "Envanter bulunamadı" },
         { status: 404 }
       );
     }
-
-    return NextResponse.json(updatedEnvanterItem);
+    return NextResponse.json(updatedEnvanter);
   } catch (error) {
-    console.error("Envanter öğesi güncelleme hatası:", error);
-    return NextResponse.json(
-      { error: "Internal Server Error" },
-      { status: 500 }
-    );
+    console.error("Envanter güncelleme hatası:", error);
+    return NextResponse.json({ error: "Sunucu hatası" }, { status: 500 });
   }
 }
 
@@ -72,28 +65,25 @@ export async function DELETE(
   request: Request,
   { params }: { params: { id: string } }
 ) {
+  const session = await getServerSession(authOptions);
+
+  if (!session) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  await dbConnect();
+
   try {
-    const session = await getServerSession(authOptions);
-    if (!session || !session.user.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    await dbConnect();
-    const deletedEnvanterItem = await Envanter.findByIdAndDelete(params.id);
-
-    if (!deletedEnvanterItem) {
+    const deletedEnvanter = await Envanter.findByIdAndDelete(params.id);
+    if (!deletedEnvanter) {
       return NextResponse.json(
-        { error: "Envanter öğesi bulunamadı" },
+        { error: "Envanter bulunamadı" },
         { status: 404 }
       );
     }
-
-    return NextResponse.json({ message: "Envanter öğesi başarıyla silindi" });
+    return NextResponse.json({ message: "Envanter başarıyla silindi" });
   } catch (error) {
-    console.error("Envanter öğesi silme hatası:", error);
-    return NextResponse.json(
-      { error: "Internal Server Error" },
-      { status: 500 }
-    );
+    console.error("Envanter silme hatası:", error);
+    return NextResponse.json({ error: "Sunucu hatası" }, { status: 500 });
   }
 }
