@@ -1,18 +1,15 @@
-import type { NextApiRequest, NextApiResponse } from "next";
-import { getServerSession } from "next-auth";
+import { NextResponse } from "next/server";
+import { getServerSession } from "next-auth/next";
 import { authOptions } from "../auth/[...nextauth]/route";
 
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse
-) {
-  const session = await getServerSession(req, res, authOptions);
+export async function GET() {
+  const session = await getServerSession(authOptions);
 
   if (session) {
-    // Signed in
-    res.status(200).json({ message: "Signed in", session });
+    // Fetch and return users data
+    // For now, we'll just return a placeholder response
+    return NextResponse.json({ message: "Users data" });
   } else {
-    // Not Signed in
-    res.status(401).json({ message: "Not Signed In" });
+    return NextResponse.json({ message: "Not authenticated" }, { status: 401 });
   }
 }

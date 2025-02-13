@@ -4,8 +4,9 @@ import bcryptjs from "bcryptjs";
 import dbConnect from "@/lib/mongodb";
 import { User } from "@/models/User";
 import type { JWT } from "next-auth/jwt";
+import type { NextAuthOptions } from "next-auth";
 
-const handler = NextAuth({
+export const authOptions: NextAuthOptions = {
   providers: [
     CredentialsProvider({
       name: "Credentials",
@@ -67,6 +68,8 @@ const handler = NextAuth({
     error: "/auth/error",
   },
   secret: process.env.NEXTAUTH_SECRET,
-});
+};
+
+const handler = NextAuth(authOptions);
 
 export { handler as GET, handler as POST };
