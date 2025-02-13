@@ -1,50 +1,43 @@
 import { NextResponse } from "next/server";
-import dbConnect from "@/lib/dbConnect";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 import TarlaIsleme from "@/models/TarlaIsleme";
-import { getToken } from "next-auth/jwt";
+import dbConnect from "@/lib/mongodb";
 
-export async function GET(req: Request) {
-  await dbConnect();
-  const token = await getToken({ req });
+export async function GET(request: Request) {
+  const session = await getServerSession(authOptions);
 
-  if (!token) {
+  if (!session) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  await dbConnect();
+
   try {
-    const tarlaIslemeler = await TarlaIsleme.find({})
-      .populate("envanter_id", "ad")
-      .populate("tarla_id", "ad")
-      .populate("created_by", "name");
+    const tarlaIslemeler = await TarlaIsleme.find({}).populate("tarla_id");
     return NextResponse.json(tarlaIslemeler);
   } catch (error) {
-    return NextResponse.json(
-      { error: "Internal Server Error" },
-      { status: 500 }
-    );
+    console.error("Tarla işlemeleri getirme hatası:", error);
+    return NextResponse.json({ error: "Sunucu hatası" }, { status: 500 });
   }
 }
 
-export async function POST(req: Request) {
-  await dbConnect();
-  const token = await getToken({ req });
+export async function POST(request: Request) {
+  const session = await getServerSession(authOptions);
 
-  if (!token) {
+  if (!session) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  await dbConnect();
+
   try {
-    const body = await req.json();
-    const newTarlaIsleme = new TarlaIsleme({
-      ...body,
-      created_by: token.sub,
-    });
-    const savedTarlaIsleme = await newTarlaIsleme.save();
-    return NextResponse.json(savedTarlaIsleme, { status: 201 });
+    const body = await request.json();
+    const yeniTarlaIsleme = new TarlaIsleme(body);
+    await yeniTarlaIsleme.save();
+    return NextResponse.json(yeniTarlaIsleme, { status: 201 });
   } catch (error) {
-    return NextResponse.json(
-      { error: "Internal Server Error" },
-      { status: 500 }
-    );
+    console.error("Tarla işleme ekleme hatası:", error);
+    return NextResponse.json({ error: "Sunucu hatası" }, { status: 500 });
   }
 }

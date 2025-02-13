@@ -1,24 +1,25 @@
 import { NextResponse } from "next/server";
-import dbConnect from "@/lib/dbConnect";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 import TarlaIsleme from "@/models/TarlaIsleme";
-import { getToken } from "next-auth/jwt";
+import dbConnect from "@/lib/mongodb";
 
 export async function GET(
-  req: Request,
+  request: Request,
   { params }: { params: { id: string } }
 ) {
-  await dbConnect();
-  const token = await getToken({ req });
+  const session = await getServerSession(authOptions);
 
-  if (!token) {
+  if (!session) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  await dbConnect();
+
   try {
-    const tarlaIsleme = await TarlaIsleme.findById(params.id)
-      .populate("envanter_id", "ad")
-      .populate("tarla_id", "ad")
-      .populate("created_by", "name");
+    const tarlaIsleme = await TarlaIsleme.findById(params.id).populate(
+      "tarla_id"
+    );
     if (!tarlaIsleme) {
       return NextResponse.json(
         { error: "Tarla işleme bulunamadı" },
@@ -27,26 +28,25 @@ export async function GET(
     }
     return NextResponse.json(tarlaIsleme);
   } catch (error) {
-    return NextResponse.json(
-      { error: "Internal Server Error" },
-      { status: 500 }
-    );
+    console.error("Tarla işleme getirme hatası:", error);
+    return NextResponse.json({ error: "Sunucu hatası" }, { status: 500 });
   }
 }
 
 export async function PUT(
-  req: Request,
+  request: Request,
   { params }: { params: { id: string } }
 ) {
-  await dbConnect();
-  const token = await getToken({ req });
+  const session = await getServerSession(authOptions);
 
-  if (!token) {
+  if (!session) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  await dbConnect();
+
   try {
-    const body = await req.json();
+    const body = await request.json();
     const updatedTarlaIsleme = await TarlaIsleme.findByIdAndUpdate(
       params.id,
       body,
@@ -60,23 +60,22 @@ export async function PUT(
     }
     return NextResponse.json(updatedTarlaIsleme);
   } catch (error) {
-    return NextResponse.json(
-      { error: "Internal Server Error" },
-      { status: 500 }
-    );
+    console.error("Tarla işleme güncelleme hatası:", error);
+    return NextResponse.json({ error: "Sunucu hatası" }, { status: 500 });
   }
 }
 
 export async function DELETE(
-  req: Request,
+  request: Request,
   { params }: { params: { id: string } }
 ) {
-  await dbConnect();
-  const token = await getToken({ req });
+  const session = await getServerSession(authOptions);
 
-  if (!token) {
+  if (!session) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+
+  await dbConnect();
 
   try {
     const deletedTarlaIsleme = await TarlaIsleme.findByIdAndDelete(params.id);
@@ -88,9 +87,7 @@ export async function DELETE(
     }
     return NextResponse.json({ message: "Tarla işleme başarıyla silindi" });
   } catch (error) {
-    return NextResponse.json(
-      { error: "Internal Server Error" },
-      { status: 500 }
-    );
+    console.error("Tarla işleme silme hatası:", error);
+    return NextResponse.json({ error: "Sunucu hatası" }, { status: 500 });
   }
 }
