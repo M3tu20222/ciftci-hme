@@ -1,38 +1,54 @@
-export default function Home() {
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import Layout from "./components/Layout";
+
+export default function HomePage() {
   return (
-    <div className="space-y-6">
-      <h1 className="text-5xl font-bold text-center mb-12 text-neon-pink title-glow">
-        Çiftçilik Sistemine Hoş Geldiniz
-      </h1>
-      <p className="text-neon-cyan text-center text-xl">
-        Bu sistem, çiftçilik işlemlerinizi yönetmenize yardımcı olur.
-      </p>
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        <div className="p-6 bg-gray-800 rounded-lg shadow-lg border border-neon-blue">
-          <h2 className="text-2xl font-bold mb-4 text-neon-green">
-            Envanter Yönetimi
-          </h2>
-          <p className="text-neon-cyan">
-            Ürünlerinizi ve ekipmanlarınızı kolayca takip edin.
-          </p>
-        </div>
-        <div className="p-6 bg-gray-800 rounded-lg shadow-lg border border-neon-blue">
-          <h2 className="text-2xl font-bold mb-4 text-neon-green">
-            Finansal Takip
-          </h2>
-          <p className="text-neon-cyan">
-            Gelir ve giderlerinizi anlık olarak izleyin.
-          </p>
-        </div>
-        <div className="p-6 bg-gray-800 rounded-lg shadow-lg border border-neon-blue">
-          <h2 className="text-2xl font-bold mb-4 text-neon-green">
-            Tarla Yönetimi
-          </h2>
-          <p className="text-neon-cyan">
-            Tarlalarınızı ve ekinlerinizi etkin bir şekilde yönetin.
-          </p>
+    <Layout>
+      <div className="space-y-8">
+        <h1 className="text-5xl font-bold text-center text-neon-pink title-glow">
+          Çiftçilik Sistemine Hoş Geldiniz
+        </h1>
+        <p className="text-xl text-center text-neon-cyan">
+          Bu sistem, çiftçilik işlemlerinizi yönetmenize yardımcı olur.
+        </p>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-12">
+          <Card className="bg-gray-800 border-2 border-neon-green hover:shadow-neon-green transition-shadow duration-300">
+            <CardHeader>
+              <CardTitle className="text-neon-green">
+                Envanter Yönetimi
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-neon-cyan">
+                Ürünlerinizi ve ekipmanlarınızı kolayca takip edin.
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-gray-800 border-2 border-neon-pink hover:shadow-neon-pink transition-shadow duration-300">
+            <CardHeader>
+              <CardTitle className="text-neon-pink">Finansal Takip</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-neon-cyan">
+                Gelir ve giderlerinizi anlık olarak izleyin.
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-gray-800 border-2 border-neon-blue hover:shadow-neon-blue transition-shadow duration-300">
+            <CardHeader>
+              <CardTitle className="text-neon-blue">Tarla Yönetimi</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-neon-cyan">
+                Tarlalarınızı ve ekinlerinizi etkin bir şekilde yönetin.
+              </p>
+            </CardContent>
+          </Card>
         </div>
       </div>
-    </div>
+    </Layout>
   );
 }

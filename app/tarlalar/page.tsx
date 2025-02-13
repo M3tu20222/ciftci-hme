@@ -71,6 +71,7 @@ export default function TarlalarPage() {
   });
   const [editingTarla, setEditingTarla] = useState<Tarla | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false); // Added state for add dialog
   const { data: session, status } = useSession();
   const router = useRouter();
 
@@ -172,7 +173,7 @@ export default function TarlalarPage() {
         title: "Başarılı",
         description: "Yeni tarla başarıyla eklendi.",
       });
-      setIsDialogOpen(false);
+      setIsAddDialogOpen(false); // Update: Close the add dialog
       setYeniTarla({
         ad: "",
         dekar: 0,
@@ -231,7 +232,9 @@ export default function TarlalarPage() {
         </h1>
 
         <div className="flex justify-end mb-4">
-          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+          <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+            {" "}
+            {/* Updated Dialog for adding new tarla */}
             <DialogTrigger asChild>
               <Button className="bg-neon-purple hover:bg-neon-pink text-white">
                 <PlusCircle className="mr-2 h-4 w-4" /> Yeni Tarla Ekle
@@ -487,7 +490,9 @@ export default function TarlalarPage() {
                 </p>
               </CardContent>
               <CardFooter>
-                <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+                <Dialog>
+                  {" "}
+                  {/* Updated Dialog for editing tarla */}
                   <DialogTrigger asChild>
                     <Button
                       className="w-full bg-neon-cyan hover:bg-neon-blue text-black"
