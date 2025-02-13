@@ -3,9 +3,9 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import bcryptjs from "bcryptjs";
 import dbConnect from "@/lib/mongodb";
 import { User } from "@/models/User";
-import type { NextAuthOptions } from "next-auth";
+import type { JWT } from "next-auth/jwt";
 
-export const authOptions: NextAuthOptions = {
+const handler = NextAuth({
   providers: [
     CredentialsProvider({
       name: "Credentials",
@@ -14,56 +14,59 @@ export const authOptions: NextAuthOptions = {
         password: { label: "Password", type: "password" },
       },
       async authorize(credentials) {
-        if (!credentials) {
-          throw new Error("No credentials provided");
+        if (!credentials?.email || !credentials?.password) {
+          throw new Error("Email ve şifre gereklidir");
         }
-        await dbConnect();
+
         try {
+          await dbConnect();
           const user = await User.findOne({ email: credentials.email });
           if (!user) {
-            throw new Error("User not found");
+            throw new Error("Geçersiz email veya şifre");
           }
           const isValid = await bcryptjs.compare(
             credentials.password,
             user.password
           );
           if (!isValid) {
-            throw new Error("Invalid password");
+            throw new Error("Geçersiz email veya şifre");
           }
+
           return {
             id: user._id.toString(),
-            email: user.email,
             name: user.name,
+            email: user.email,
             role: user.role,
           };
         } catch (error) {
-          console.error("Error authorizing user:", error);
-          return null;
+          console.error("Auth error:", error);
+          throw new Error("Kimlik doğrulama hatası");
         }
       },
     }),
   ],
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user }: { token: JWT; user?: any }) {
       if (user) {
-        token.id = user.id;
         token.role = user.role;
+        token.id = user.id;
       }
       return token;
     },
-    async session({ session, token }) {
-      if (session.user) {
-        session.user.id = token.id as string;
-        session.user.role = token.role as string;
+    async session({ session, token }: { session: any; token: JWT }) {
+      if (session?.user) {
+        session.user.role = token.role;
+        session.user.id = token.id;
       }
       return session;
     },
   },
-  secret: process.env.NEXTAUTH_SECRET,
   pages: {
     signIn: "/auth/signin",
+    signOut: "/auth/signout",
+    error: "/auth/error",
   },
-};
+  secret: process.env.NEXTAUTH_SECRET,
+});
 
-const handler = NextAuth(authOptions);
 export { handler as GET, handler as POST };
