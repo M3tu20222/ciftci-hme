@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import Sahip from "@/models/Sahip";
 import dbConnect from "@/lib/mongodb";
+import Sahiplik from "@/models/Sahiplik";
 
 export async function GET() {
   const session = await getServerSession(authOptions);
@@ -14,10 +14,12 @@ export async function GET() {
   await dbConnect();
 
   try {
-    const sahipler = await Sahip.find({}).populate("user_id", "name email");
-    return NextResponse.json(sahipler);
+    const sahiplikler = await Sahiplik.find({}).populate(
+      "envanter_id sahip_id"
+    );
+    return NextResponse.json(sahiplikler);
   } catch (error) {
-    console.error("Sahipler getirme hatası:", error);
+    console.error("Sahiplikleri getirme hatası:", error);
     return NextResponse.json({ error: "Sunucu hatası" }, { status: 500 });
   }
 }
@@ -33,11 +35,11 @@ export async function POST(request: Request) {
 
   try {
     const body = await request.json();
-    const yeniSahip = new Sahip(body);
-    await yeniSahip.save();
-    return NextResponse.json(yeniSahip, { status: 201 });
+    const yeniSahiplik = new Sahiplik(body);
+    await yeniSahiplik.save();
+    return NextResponse.json(yeniSahiplik, { status: 201 });
   } catch (error) {
-    console.error("Sahip ekleme hatası:", error);
+    console.error("Sahiplik ekleme hatası:", error);
     return NextResponse.json({ error: "Sunucu hatası" }, { status: 500 });
   }
 }

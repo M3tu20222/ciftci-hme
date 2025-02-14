@@ -4,7 +4,7 @@ import { authOptions } from "@/lib/auth";
 import TarlaSahip from "@/models/TarlaSahip";
 import dbConnect from "@/lib/mongodb";
 
-export async function GET(request: Request) {
+export async function GET() {
   const session = await getServerSession(authOptions);
 
   if (!session) {
@@ -14,13 +14,26 @@ export async function GET(request: Request) {
   await dbConnect();
 
   try {
-    const tarlaSahipler = await TarlaSahip.find({}).populate(
-      "tarla_id sahip_id"
-    );
+    const tarlaSahipler = await TarlaSahip.find({})
+      .populate("tarla_id")
+      .populate("sahipler.sahip_id")
+      .populate("created_by");
+
     return NextResponse.json(tarlaSahipler);
   } catch (error) {
-    console.error("Tarla sahipleri getirme hatası:", error);
-    return NextResponse.json({ error: "Sunucu hatası" }, { status: 500 });
+    if (error instanceof Error) {
+      console.error("Tarla sahip ekleme hatası:", error);
+      return NextResponse.json(
+        { error: "Sunucu hatası", details: error.message },
+        { status: 500 }
+      );
+    } else {
+      console.error("Tarla sahip ekleme hatası:", error);
+      return NextResponse.json(
+        { error: "Sunucu hatası", details: "Unknown error" },
+        { status: 500 }
+      );
+    }
   }
 }
 
@@ -39,7 +52,18 @@ export async function POST(request: Request) {
     await yeniTarlaSahip.save();
     return NextResponse.json(yeniTarlaSahip, { status: 201 });
   } catch (error) {
+  if (error instanceof Error) {
     console.error("Tarla sahip ekleme hatası:", error);
-    return NextResponse.json({ error: "Sunucu hatası" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Sunucu hatası", details: error.message },
+      { status: 500 }
+    );
+  } else {
+    console.error("Tarla sahip ekleme hatası:", error);
+    return NextResponse.json(
+      { error: "Sunucu hatası", details: "Unknown error" },
+      { status: 500 }
+    );
   }
+}
 }

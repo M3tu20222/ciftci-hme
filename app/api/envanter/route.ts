@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import Envanter from "@/models/Envanter";
 import dbConnect from "@/lib/mongodb";
+import Envanter from "@/models/Envanter";
 
-export async function GET(request: Request) {
+export async function GET() {
   const session = await getServerSession(authOptions);
 
   if (!session) {
@@ -14,10 +14,10 @@ export async function GET(request: Request) {
   await dbConnect();
 
   try {
-    const envanterler = await Envanter.find({});
+    const envanterler = await Envanter.find({}).populate("kategori_id");
     return NextResponse.json(envanterler);
   } catch (error) {
-    console.error("Envanter getirme hatası:", error);
+    console.error("Envanterleri getirme hatası:", error);
     return NextResponse.json({ error: "Sunucu hatası" }, { status: 500 });
   }
 }

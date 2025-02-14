@@ -1,11 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Layout from "../components/Layout";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import {
   Card,
   CardContent,
@@ -29,20 +28,69 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { PlusCircle, Pencil, User } from "lucide-react";
+import { PlusCircle, User, Pencil } from "lucide-react";
+import { useToast } from "@/components/ui/use-toast";
+import { Toaster } from "@/components/ui/toaster";
 
 interface Sahip {
   _id: string;
   ad: string;
   tip: string;
+  user_id: string;
+}
+
+interface User {
+  _id: string;
+  name: string;
+  email: string;
 }
 
 export default function SahiplerPage() {
   const [sahipler, setSahipler] = useState<Sahip[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
   const [yeniSahip, setYeniSahip] = useState<Partial<Sahip>>({});
   const [editingSahip, setEditingSahip] = useState<Sahip | null>(null);
   const { data: session, status } = useSession();
   const router = useRouter();
+  const { toast } = useToast();
+
+  const fetchSahipler = useCallback(async () => {
+    try {
+      const response = await fetch("/api/sahipler");
+      if (!response.ok) throw new Error("Sahipleri getirme hatası");
+      const data = await response.json();
+      setSahipler(data);
+    } catch (error) {
+      console.error("Sahipleri getirme hatası:", error);
+      toast({
+        title: "Hata",
+        description: "Sahipleri getirirken bir hata oluştu.",
+        variant: "destructive",
+      });
+    }
+  }, [toast]);
+
+  const fetchUsers = useCallback(async () => {
+    try {
+      const response = await fetch("/api/users");
+      if (!response.ok) throw new Error("Kullanıcıları getirme hatası");
+      const data = await response.json();
+      if (Array.isArray(data)) {
+        setUsers(data);
+      } else {
+        console.error("API users verisi bir dizi değil:", data);
+        setUsers([]);
+      }
+    } catch (error) {
+      console.error("Kullanıcıları getirme hatası:", error);
+      toast({
+        title: "Hata",
+        description: "Kullanıcıları getirirken bir hata oluştu.",
+        variant: "destructive",
+      });
+      setUsers([]);
+    }
+  }, [toast]);
 
   useEffect(() => {
     if (status === "loading") return;
@@ -51,18 +99,8 @@ export default function SahiplerPage() {
       return;
     }
     fetchSahipler();
-  }, [session, status, router]);
-
-  const fetchSahipler = async () => {
-    try {
-      const response = await fetch("/api/sahipler");
-      if (!response.ok) throw new Error("Sahipleri getirme hatası");
-      const data = await response.json();
-      setSahipler(data);
-    } catch (error) {
-      console.error("Sahipleri getirme hatası:", error);
-    }
-  };
+    fetchUsers();
+  }, [session, status, router, fetchSahipler, fetchUsers]);
 
   const handleAddSahip = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -73,10 +111,19 @@ export default function SahiplerPage() {
         body: JSON.stringify(yeniSahip),
       });
       if (!response.ok) throw new Error("Sahip ekleme hatası");
-      fetchSahipler();
+      await fetchSahipler();
       setYeniSahip({});
+      toast({
+        title: "Başarılı",
+        description: "Yeni sahip başarıyla eklendi.",
+      });
     } catch (error) {
       console.error("Sahip ekleme hatası:", error);
+      toast({
+        title: "Hata",
+        description: "Sahip eklenirken bir hata oluştu.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -90,10 +137,19 @@ export default function SahiplerPage() {
         body: JSON.stringify(editingSahip),
       });
       if (!response.ok) throw new Error("Sahip güncelleme hatası");
-      fetchSahipler();
+      await fetchSahipler();
       setEditingSahip(null);
+      toast({
+        title: "Başarılı",
+        description: "Sahip başarıyla güncellendi.",
+      });
     } catch (error) {
       console.error("Sahip güncelleme hatası:", error);
+      toast({
+        title: "Hata",
+        description: "Sahip güncellenirken bir hata oluştu.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -104,65 +160,77 @@ export default function SahiplerPage() {
           Sahip Yönetimi
         </h1>
 
-        <div className="flex justify-end mb-4">
-          <Dialog>
-            <DialogTrigger asChild>
-              <Button className="bg-neon-purple hover:bg-neon-pink text-white">
-                <PlusCircle className="mr-2 h-4 w-4" /> Yeni Sahip Ekle
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="bg-gray-900 border-2 border-neon-purple">
-              <DialogHeader>
-                <DialogTitle className="text-2xl font-bold text-neon-purple">
-                  Yeni Sahip Ekle
-                </DialogTitle>
-              </DialogHeader>
-              <form onSubmit={handleAddSahip}>
-                <div className="grid gap-4 py-4">
-                  <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="ad" className="text-right text-neon-blue">
-                      Ad
-                    </Label>
-                    <Input
-                      id="ad"
-                      value={yeniSahip.ad || ""}
-                      onChange={(e) =>
-                        setYeniSahip({ ...yeniSahip, ad: e.target.value })
-                      }
-                      className="col-span-3 bg-gray-800 text-neon-pink border-neon-blue"
-                    />
-                  </div>
-                  <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="tip" className="text-right text-neon-blue">
-                      Tip
-                    </Label>
-                    <Select
-                      onValueChange={(value) =>
-                        setYeniSahip({ ...yeniSahip, tip: value })
-                      }
-                    >
-                      <SelectTrigger className="col-span-3 bg-gray-800 text-neon-green border-neon-green">
-                        <SelectValue placeholder="Tip seçin" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Ortak">Ortak</SelectItem>
-                        <SelectItem value="Çalışan">Çalışan</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-                <DialogFooter>
-                  <Button
-                    type="submit"
-                    className="bg-neon-green hover:bg-neon-blue text-black"
+        <Dialog>
+          <DialogTrigger asChild>
+            <Button className="bg-neon-purple hover:bg-neon-pink text-white">
+              <PlusCircle className="mr-2 h-4 w-4" /> Yeni Sahip Ekle
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="bg-gray-900 border-2 border-neon-purple">
+            <DialogHeader>
+              <DialogTitle className="text-2xl font-bold text-neon-purple">
+                Yeni Sahip Ekle
+              </DialogTitle>
+            </DialogHeader>
+            <form onSubmit={handleAddSahip}>
+              <div className="grid gap-4 py-4">
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="user" className="text-right text-neon-blue">
+                    Kullanıcı
+                  </Label>
+                  <Select
+                    value={yeniSahip.user_id || ""}
+                    onValueChange={(value) =>
+                      setYeniSahip({
+                        ...yeniSahip,
+                        user_id: value,
+                        ad: users.find((u) => u._id === value)?.name || "",
+                      })
+                    }
                   >
-                    Ekle
-                  </Button>
-                </DialogFooter>
-              </form>
-            </DialogContent>
-          </Dialog>
-        </div>
+                    <SelectTrigger className="col-span-3 bg-gray-800 text-neon-pink border-neon-blue">
+                      <SelectValue placeholder="Kullanıcı seçin" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {users.map((user) => (
+                        <SelectItem key={user._id} value={user._id}>
+                          {user.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="tip" className="text-right text-neon-blue">
+                    Tip
+                  </Label>
+                  <Select
+                    value={yeniSahip.tip || ""}
+                    onValueChange={(value) =>
+                      setYeniSahip({ ...yeniSahip, tip: value })
+                    }
+                  >
+                    <SelectTrigger className="col-span-3 bg-gray-800 text-neon-pink border-neon-blue">
+                      <SelectValue placeholder="Tip seçin" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Bireysel">Bireysel</SelectItem>
+                      <SelectItem value="Kurumsal">Kurumsal</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <DialogFooter>
+                <Button
+                  type="submit"
+                  className="bg-neon-green hover:bg-neon-blue text-black"
+                >
+                  Ekle
+                </Button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        </Dialog>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {sahipler.map((sahip) => (
@@ -202,22 +270,34 @@ export default function SahiplerPage() {
                         <div className="grid gap-4 py-4">
                           <div className="grid grid-cols-4 items-center gap-4">
                             <Label
-                              htmlFor="edit-ad"
+                              htmlFor="edit-user"
                               className="text-right text-neon-blue"
                             >
-                              Ad
+                              Kullanıcı
                             </Label>
-                            <Input
-                              id="edit-ad"
-                              value={editingSahip.ad}
-                              onChange={(e) =>
+                            <Select
+                              value={editingSahip.user_id}
+                              onValueChange={(value) =>
                                 setEditingSahip({
                                   ...editingSahip,
-                                  ad: e.target.value,
+                                  user_id: value,
+                                  ad:
+                                    users.find((u) => u._id === value)?.name ||
+                                    "",
                                 })
                               }
-                              className="col-span-3 bg-gray-800 text-neon-pink border-neon-blue"
-                            />
+                            >
+                              <SelectTrigger className="col-span-3 bg-gray-800 text-neon-pink border-neon-blue">
+                                <SelectValue placeholder="Kullanıcı seçin" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {users.map((user) => (
+                                  <SelectItem key={user._id} value={user._id}>
+                                    {user.name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
                           </div>
                           <div className="grid grid-cols-4 items-center gap-4">
                             <Label
@@ -232,12 +312,16 @@ export default function SahiplerPage() {
                                 setEditingSahip({ ...editingSahip, tip: value })
                               }
                             >
-                              <SelectTrigger className="col-span-3 bg-gray-800 text-neon-green border-neon-green">
+                              <SelectTrigger className="col-span-3 bg-gray-800 text-neon-pink border-neon-blue">
                                 <SelectValue placeholder="Tip seçin" />
                               </SelectTrigger>
                               <SelectContent>
-                                <SelectItem value="Ortak">Ortak</SelectItem>
-                                <SelectItem value="Çalışan">Çalışan</SelectItem>
+                                <SelectItem value="Bireysel">
+                                  Bireysel
+                                </SelectItem>
+                                <SelectItem value="Kurumsal">
+                                  Kurumsal
+                                </SelectItem>
                               </SelectContent>
                             </Select>
                           </div>
@@ -247,7 +331,7 @@ export default function SahiplerPage() {
                             type="submit"
                             className="bg-neon-green hover:bg-neon-blue text-black"
                           >
-                            Kaydet
+                            Güncelle
                           </Button>
                         </DialogFooter>
                       </form>
@@ -259,6 +343,7 @@ export default function SahiplerPage() {
           ))}
         </div>
       </div>
+      <Toaster />
     </Layout>
   );
 }
