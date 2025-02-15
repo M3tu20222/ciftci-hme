@@ -14,7 +14,13 @@ export async function GET() {
   await dbConnect();
 
   try {
-    const envanterler = await Envanter.find({}).populate("kategori_id");
+    const envanterler = await Envanter.find({})
+      .populate("kategori_id", "ad")
+      .populate({
+        path: "sahiplikler.sahip_id",
+        model: "User",
+        select: "name",
+      });
     return NextResponse.json(envanterler);
   } catch (error) {
     console.error("Envanterleri getirme hatası:", error);

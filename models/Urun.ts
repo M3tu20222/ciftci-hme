@@ -16,12 +16,13 @@ const UrunSchema: Schema = new Schema(
     marka: { type: String, required: true },
     birim: { type: String, required: true },
     sezon_id: { type: Schema.Types.ObjectId, ref: "Sezon", required: true },
-    created_by: { type: Schema.Types.ObjectId, ref: "Sahip", required: true },
+    created_by: { type: Schema.Types.ObjectId, ref: "User", required: true }, // Changed from Sahip to User
   },
   {
     timestamps: true,
   }
 );
 
-export default mongoose.models.Urun ||
-  mongoose.model<IUrun>("Urun", UrunSchema);
+const Urun = mongoose.models.Urun || mongoose.model<IUrun>("Urun", UrunSchema);
+
+export default Urun;

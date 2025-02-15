@@ -20,20 +20,12 @@ export async function GET() {
       .populate("created_by");
 
     return NextResponse.json(tarlaSahipler);
-  } catch (error) {
-    if (error instanceof Error) {
-      console.error("Tarla sahip ekleme hatası:", error);
-      return NextResponse.json(
-        { error: "Sunucu hatası", details: error.message },
-        { status: 500 }
-      );
-    } else {
-      console.error("Tarla sahip ekleme hatası:", error);
-      return NextResponse.json(
-        { error: "Sunucu hatası", details: "Unknown error" },
-        { status: 500 }
-      );
-    }
+  } catch (error: any) {
+    console.error("Tarla sahipleri getirme hatası:", error);
+    return NextResponse.json(
+      { error: "Sunucu hatası", details: error?.message || "Bilinmeyen hata" },
+      { status: 500 }
+    );
   }
 }
 
@@ -51,19 +43,11 @@ export async function POST(request: Request) {
     const yeniTarlaSahip = new TarlaSahip(body);
     await yeniTarlaSahip.save();
     return NextResponse.json(yeniTarlaSahip, { status: 201 });
-  } catch (error) {
-  if (error instanceof Error) {
+  } catch (error: any) {
     console.error("Tarla sahip ekleme hatası:", error);
     return NextResponse.json(
-      { error: "Sunucu hatası", details: error.message },
-      { status: 500 }
-    );
-  } else {
-    console.error("Tarla sahip ekleme hatası:", error);
-    return NextResponse.json(
-      { error: "Sunucu hatası", details: "Unknown error" },
+      { error: "Sunucu hatası", details: error?.message || "Bilinmeyen hata" },
       { status: 500 }
     );
   }
-}
 }

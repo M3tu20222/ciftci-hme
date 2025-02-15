@@ -27,5 +27,6 @@ const KuyuSchema: Schema = new Schema(
   }
 );
 
-export default mongoose.models.Kuyu ||
-  mongoose.model<IKuyu>("Kuyu", KuyuSchema);
+const Kuyu = mongoose.models.Kuyu || mongoose.model<IKuyu>("Kuyu", KuyuSchema);
+
+export default Kuyu;

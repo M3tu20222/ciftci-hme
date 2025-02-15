@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import Envanter from "@/models/Envanter";
 import dbConnect from "@/lib/mongodb";
+import Envanter from "@/models/Envanter";
 
 export async function GET(
   request: Request,
@@ -17,7 +17,9 @@ export async function GET(
   await dbConnect();
 
   try {
-    const envanter = await Envanter.findById(params.id);
+    const envanter = await Envanter.findById(params.id)
+      .populate("kategori_id")
+      .populate("sahiplikler.sahip_id", "name");
     if (!envanter) {
       return NextResponse.json(
         { error: "Envanter bulunamadı" },

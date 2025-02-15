@@ -1,4 +1,7 @@
 import mongoose, { type Document, Schema } from "mongoose";
+import "./Sezon"; // Ensure Sezon model is registered
+import "./Urun"; // Ensure Urun model is registered
+import "./Kuyu"; // Ensure Kuyu model is registered
 
 export interface ITarla extends Document {
   ad: string;

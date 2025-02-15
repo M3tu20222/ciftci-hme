@@ -14,11 +14,14 @@ export async function GET(request: Request) {
   await dbConnect();
 
   try {
-    const sezonlar = await Sezon.find({});
+    const sezonlar = await Sezon.find({}).populate("created_by", "name email");
     return NextResponse.json(sezonlar);
-  } catch (error) {
+  } catch (error: any) {
     console.error("Sezonlar getirme hatası:", error);
-    return NextResponse.json({ error: "Sunucu hatası" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Sunucu hatası", details: error?.message || "Bilinmeyen hata" },
+      { status: 500 }
+    );
   }
 }
 
@@ -36,8 +39,11 @@ export async function POST(request: Request) {
     const yeniSezon = new Sezon(body);
     await yeniSezon.save();
     return NextResponse.json(yeniSezon, { status: 201 });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Sezon ekleme hatası:", error);
-    return NextResponse.json({ error: "Sunucu hatası" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Sunucu hatası", details: error?.message || "Bilinmeyen hata" },
+      { status: 500 }
+    );
   }
 }

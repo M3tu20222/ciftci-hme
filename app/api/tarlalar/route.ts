@@ -14,11 +14,19 @@ export async function GET(request: Request) {
   await dbConnect();
 
   try {
-    const tarlalar = await Tarla.find({}).populate("sezon_id urun_id kuyu_id");
+    const tarlalar = await Tarla.find({})
+      .populate("sezon_id", "ad")
+      .populate("urun_id", "ad")
+      .populate("kuyu_id", "ad")
+      .exec();
+
     return NextResponse.json(tarlalar);
-  } catch (error) {
+  } catch (error: any) {
     console.error("Tarlalar getirme hatası:", error);
-    return NextResponse.json({ error: "Sunucu hatası" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Sunucu hatası", details: error?.message || "Bilinmeyen hata" },
+      { status: 500 }
+    );
   }
 }
 
@@ -36,8 +44,11 @@ export async function POST(request: Request) {
     const yeniTarla = new Tarla(body);
     await yeniTarla.save();
     return NextResponse.json(yeniTarla, { status: 201 });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Tarla ekleme hatası:", error);
-    return NextResponse.json({ error: "Sunucu hatası" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Sunucu hatası", details: error?.message || "Bilinmeyen hata" },
+      { status: 500 }
+    );
   }
 }
