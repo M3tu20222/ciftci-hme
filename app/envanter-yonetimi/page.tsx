@@ -1,5 +1,7 @@
 "use client";
 
+import type React from "react";
+
 import { useState, useEffect, useCallback } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
@@ -91,6 +93,7 @@ export default function EnvanterYonetimiPage() {
       const response = await fetch("/api/envanter");
       if (!response.ok) throw new Error("Envanterleri getirme hatası");
       const data = await response.json();
+      console.log("Fetched envanterler:", data);
       setEnvanterler(data);
     } catch (error) {
       console.error("Envanterleri getirme hatası:", error);
@@ -109,6 +112,7 @@ export default function EnvanterYonetimiPage() {
       const data = await response.json();
       setKategoriler(data);
     } catch (error) {
+      console.error("Kategorileri getirme hatası:", error);
       toast({
         title: "Hata",
         description: "Kategorileri getirirken bir hata oluştu.",
@@ -325,9 +329,9 @@ export default function EnvanterYonetimiPage() {
                   onValueChange={(value) =>
                     setYeniEnvanter({
                       ...yeniEnvanter,
-                      kategori_id: kategoriler.find((k) => k._id === value) || {
-                        _id: "",
-                        ad: "",
+                      kategori_id: {
+                        _id: value,
+                        ad: kategoriler.find((k) => k._id === value)?.ad || "",
                       },
                     })
                   }
@@ -390,7 +394,7 @@ export default function EnvanterYonetimiPage() {
               <div className="space-y-2">
                 <Label className="text-neon-blue">Sahiplikler</Label>
                 {yeniEnvanter.sahiplikler?.map((sahiplik, index) => (
-                  <div key={index} className="flex items-center space-x-2">
+                  <div key={index} className="flex items-center space-x-2 ">
                     <Select
                       value={sahiplik.sahip_id?._id}
                       onValueChange={(value) =>
@@ -407,7 +411,11 @@ export default function EnvanterYonetimiPage() {
                       </SelectTrigger>
                       <SelectContent>
                         {sahipler.map((sahip) => (
-                          <SelectItem key={sahip._id} value={sahip._id}>
+                          <SelectItem
+                            key={sahip._id}
+                            className="bg-gray-700 text-neon-yellow border-neon-blue"
+                            value={sahip._id}
+                          >
                             {sahip.name}
                           </SelectItem>
                         ))}
@@ -537,9 +545,12 @@ export default function EnvanterYonetimiPage() {
                               onValueChange={(value) =>
                                 setEditingEnvanter({
                                   ...editingEnvanter,
-                                  kategori_id: kategoriler.find(
-                                    (k) => k._id === value
-                                  ) || { _id: "", ad: "" },
+                                  kategori_id: {
+                                    _id: value,
+                                    ad:
+                                      kategoriler.find((k) => k._id === value)
+                                        ?.ad || "",
+                                  },
                                 })
                               }
                             >
@@ -639,6 +650,7 @@ export default function EnvanterYonetimiPage() {
                                         <SelectItem
                                           key={sahip._id}
                                           value={sahip._id}
+                                          className="bg-gray-700 text-neon-green border-neon-blue"
                                         >
                                           {sahip.name}
                                         </SelectItem>
@@ -689,7 +701,7 @@ export default function EnvanterYonetimiPage() {
                         <DialogFooter>
                           <Button
                             type="submit"
-                            className="bg-neon-green hover:bg-neon-blue text-black"
+                            className="bg-neon-green hover:bg-neon-blue text-green"
                           >
                             Güncelle
                           </Button>
