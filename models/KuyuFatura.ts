@@ -18,10 +18,11 @@ const KuyuFaturaSchema: Schema = new Schema(
     odendi: { type: Boolean, default: false },
     created_by: { type: Schema.Types.ObjectId, ref: "User", required: true },
   },
-  {
-    timestamps: true,
-  }
+  { timestamps: true }
 );
 
-export default mongoose.models.KuyuFatura ||
+const KuyuFatura =
+  mongoose.models.KuyuFatura ||
   mongoose.model<IKuyuFatura>("KuyuFatura", KuyuFaturaSchema);
+
+export default KuyuFatura;

@@ -1,5 +1,7 @@
 "use client";
 
+import type React from "react";
+
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
@@ -31,7 +33,8 @@ import {
 } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { PlusCircle, Pencil, MapPin } from "lucide-react";
-import { toast } from "@/components/ui/use-toast";
+import { useToast } from "@/components/ui/use-toast";
+import { Toaster } from "@/components/ui/toaster";
 
 interface Tarla {
   _id: string;
@@ -43,7 +46,7 @@ interface Tarla {
   ada_parsel: string;
   sezon_id: { _id: string; ad: string };
   urun_id: { _id: string; ad: string };
-  kuyu_id: { _id: string; ad: string } | null;
+  kuyu_id: { _id: string; ad: string };
 }
 
 interface Sezon {
@@ -68,12 +71,15 @@ export default function TarlalarPage() {
   const [kuyular, setKuyular] = useState<Kuyu[]>([]);
   const [yeniTarla, setYeniTarla] = useState<Partial<Tarla>>({
     kiralik: false,
+    sulanan: false,
+    kuyu_id: { _id: "", ad: "" },
   });
   const [editingTarla, setEditingTarla] = useState<Tarla | null>(null);
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false); // Added state for add dialog
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const { data: session, status } = useSession();
   const router = useRouter();
+  const { toast } = useToast();
 
   useEffect(() => {
     if (status === "loading") return;
@@ -91,8 +97,7 @@ export default function TarlalarPage() {
     try {
       const response = await fetch("/api/tarlalar");
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Tarlaları getirme hatası");
+        throw new Error("Tarlaları getirme hatası");
       }
       const data = await response.json();
       setTarlalar(data);
@@ -100,8 +105,7 @@ export default function TarlalarPage() {
       console.error("Tarlaları getirme hatası:", error);
       toast({
         title: "Hata",
-        description:
-          "Tarlaları getirirken bir hata oluştu. Lütfen daha sonra tekrar deneyin.",
+        description: "Tarlaları getirirken bir hata oluştu.",
         variant: "destructive",
       });
     }
@@ -117,8 +121,7 @@ export default function TarlalarPage() {
       console.error("Sezonları getirme hatası:", error);
       toast({
         title: "Hata",
-        description:
-          "Sezonları getirirken bir hata oluştu. Lütfen daha sonra tekrar deneyin.",
+        description: "Sezonları getirirken bir hata oluştu.",
         variant: "destructive",
       });
     }
@@ -134,8 +137,7 @@ export default function TarlalarPage() {
       console.error("Ürünleri getirme hatası:", error);
       toast({
         title: "Hata",
-        description:
-          "Ürünleri getirirken bir hata oluştu. Lütfen daha sonra tekrar deneyin.",
+        description: "Ürünleri getirirken bir hata oluştu.",
         variant: "destructive",
       });
     }
@@ -151,8 +153,7 @@ export default function TarlalarPage() {
       console.error("Kuyuları getirme hatası:", error);
       toast({
         title: "Hata",
-        description:
-          "Kuyuları getirirken bir hata oluştu. Lütfen daha sonra tekrar deneyin.",
+        description: "Kuyuları getirirken bir hata oluştu.",
         variant: "destructive",
       });
     }
@@ -168,29 +169,21 @@ export default function TarlalarPage() {
       });
       if (!response.ok) throw new Error("Tarla ekleme hatası");
       await fetchTarlalar();
-      setYeniTarla({ kiralik: false });
+      setYeniTarla({
+        kiralik: false,
+        sulanan: false,
+        kuyu_id: { _id: "", ad: "" },
+      });
       toast({
         title: "Başarılı",
         description: "Yeni tarla başarıyla eklendi.",
       });
-      setIsAddDialogOpen(false); // Update: Close the add dialog
-      setYeniTarla({
-        ad: "",
-        dekar: 0,
-        durum: "",
-        sulanan: false,
-        kiralik: false,
-        ada_parsel: "",
-        sezon_id: { _id: "", ad: "" },
-        urun_id: { _id: "", ad: "" },
-        kuyu_id: null,
-      });
+      setIsAddDialogOpen(false);
     } catch (error) {
       console.error("Tarla ekleme hatası:", error);
       toast({
         title: "Hata",
-        description:
-          "Tarla eklenirken bir hata oluştu. Lütfen daha sonra tekrar deneyin.",
+        description: "Tarla eklenirken bir hata oluştu.",
         variant: "destructive",
       });
     }
@@ -208,7 +201,7 @@ export default function TarlalarPage() {
       if (!response.ok) throw new Error("Tarla güncelleme hatası");
       await fetchTarlalar();
       setEditingTarla(null);
-      setIsDialogOpen(false);
+      setIsEditDialogOpen(false);
       toast({
         title: "Başarılı",
         description: "Tarla başarıyla güncellendi.",
@@ -217,8 +210,29 @@ export default function TarlalarPage() {
       console.error("Tarla güncelleme hatası:", error);
       toast({
         title: "Hata",
-        description:
-          "Tarla güncellenirken bir hata oluştu. Lütfen daha sonra tekrar deneyin.",
+        description: "Tarla güncellenirken bir hata oluştu.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDeleteTarla = async (id: string) => {
+    if (!confirm("Bu tarlayı silmek istediğinizden emin misiniz?")) return;
+    try {
+      const response = await fetch(`/api/tarlalar/${id}`, {
+        method: "DELETE",
+      });
+      if (!response.ok) throw new Error("Tarla silme hatası");
+      await fetchTarlalar();
+      toast({
+        title: "Başarılı",
+        description: "Tarla başarıyla silindi.",
+      });
+    } catch (error) {
+      console.error("Tarla silme hatası:", error);
+      toast({
+        title: "Hata",
+        description: "Tarla silinirken bir hata oluştu.",
         variant: "destructive",
       });
     }
@@ -233,8 +247,6 @@ export default function TarlalarPage() {
 
         <div className="flex justify-end mb-4">
           <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-            {" "}
-            {/* Updated Dialog for adding new tarla */}
             <DialogTrigger asChild>
               <Button className="bg-neon-purple hover:bg-neon-pink text-white">
                 <PlusCircle className="mr-2 h-4 w-4" /> Yeni Tarla Ekle
@@ -407,8 +419,10 @@ export default function TarlalarPage() {
                       onValueChange={(value) =>
                         setYeniTarla({
                           ...yeniTarla,
-                          kuyu_id:
-                            value === "0" ? null : { _id: value, ad: "" },
+                          kuyu_id: {
+                            _id: value,
+                            ad: kuyular.find((k) => k._id === value)?.ad || "",
+                          },
                         })
                       }
                     >
@@ -416,7 +430,6 @@ export default function TarlalarPage() {
                         <SelectValue placeholder="Kuyu seçin" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="0">Kuyu Seçilmedi</SelectItem>
                         {kuyular.map((kuyu) => (
                           <SelectItem key={kuyu._id} value={kuyu._id}>
                             {kuyu.ad}
@@ -490,9 +503,10 @@ export default function TarlalarPage() {
                 </p>
               </CardContent>
               <CardFooter>
-                <Dialog>
-                  {" "}
-                  {/* Updated Dialog for editing tarla */}
+                <Dialog
+                  open={isEditDialogOpen}
+                  onOpenChange={setIsEditDialogOpen}
+                >
                   <DialogTrigger asChild>
                     <Button
                       className="w-full bg-neon-cyan hover:bg-neon-blue text-black"
@@ -689,18 +703,16 @@ export default function TarlalarPage() {
                               Kuyu
                             </Label>
                             <Select
-                              value={
-                                editingTarla.kuyu_id
-                                  ? editingTarla.kuyu_id._id
-                                  : "0"
-                              }
+                              value={editingTarla.kuyu_id?._id}
                               onValueChange={(value) =>
                                 setEditingTarla({
                                   ...editingTarla,
-                                  kuyu_id:
-                                    value === "0"
-                                      ? null
-                                      : { _id: value, ad: "" },
+                                  kuyu_id: {
+                                    _id: value,
+                                    ad:
+                                      kuyular.find((k) => k._id === value)
+                                        ?.ad || "",
+                                  },
                                 })
                               }
                             >
@@ -708,9 +720,6 @@ export default function TarlalarPage() {
                                 <SelectValue placeholder="Kuyu seçin" />
                               </SelectTrigger>
                               <SelectContent>
-                                <SelectItem value="0">
-                                  Kuyu Seçilmedi
-                                </SelectItem>
                                 {kuyular.map((kuyu) => (
                                   <SelectItem key={kuyu._id} value={kuyu._id}>
                                     {kuyu.ad}
@@ -725,18 +734,25 @@ export default function TarlalarPage() {
                             type="submit"
                             className="bg-neon-green hover:bg-neon-blue text-black"
                           >
-                            Kaydet
+                            Güncelle
                           </Button>
                         </DialogFooter>
                       </form>
                     )}
                   </DialogContent>
                 </Dialog>
+                <Button
+                  className="w-full mt-2 bg-neon-red hover:bg-neon-pink text-white"
+                  onClick={() => handleDeleteTarla(tarla._id)}
+                >
+                  Sil
+                </Button>
               </CardFooter>
             </Card>
           ))}
         </div>
       </div>
+      <Toaster />
     </Layout>
   );
 }

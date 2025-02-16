@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import Tarla from "@/models/Tarla";
 import dbConnect from "@/lib/mongodb";
+import SulamaKaydi from "@/models/SulamaKaydi";
 
 export async function GET(
   request: Request,
@@ -17,16 +17,19 @@ export async function GET(
   await dbConnect();
 
   try {
-    const tarla = await Tarla.findById(params.id)
+    const kayit = await SulamaKaydi.findById(params.id)
+      .populate("tarla_id", "ad")
+      .populate("kuyu_id", "ad")
       .populate("sezon_id", "ad")
-      .populate("urun_id", "ad")
-      .populate("kuyular", "ad"); // Changed from kuyu_id to kuyular
-    if (!tarla) {
-      return NextResponse.json({ error: "Tarla bulunamadı" }, { status: 404 });
+      .populate("created_by", "name");
+      
+    if (!kayit) {
+      return NextResponse.json({ error: "Kayıt bulunamadı" }, { status: 404 });
     }
-    return NextResponse.json(tarla);
+
+    return NextResponse.json(kayit);
   } catch (error) {
-    console.error("Tarla getirme hatası:", error);
+    console.error("Sulama kaydı getirme hatası:", error);
     return NextResponse.json({ error: "Sunucu hatası" }, { status: 500 });
   }
 }
@@ -45,15 +48,28 @@ export async function PUT(
 
   try {
     const body = await request.json();
-    const updatedTarla = await Tarla.findByIdAndUpdate(params.id, body, {
-      new: true,
-    });
-    if (!updatedTarla) {
-      return NextResponse.json({ error: "Tarla bulunamadı" }, { status: 404 });
+    const baslangic_zamani = new Date(body.baslangic_zamani);
+    const bitis_zamani = new Date(
+      baslangic_zamani.getTime() + body.sulama_suresi * 60000
+    );
+
+    const updatedKayit = await SulamaKaydi.findByIdAndUpdate(
+      params.id,
+      { ...body, bitis_zamani },
+      { new: true }
+    )
+      .populate("tarla_id", "ad")
+      .populate("kuyu_id", "ad")
+      .populate("sezon_id", "ad")
+      .populate("created_by", "name");
+
+    if (!updatedKayit) {
+      return NextResponse.json({ error: "Kayıt bulunamadı" }, { status: 404 });
     }
-    return NextResponse.json(updatedTarla);
+
+    return NextResponse.json(updatedKayit);
   } catch (error) {
-    console.error("Tarla güncelleme hatası:", error);
+    console.error("Sulama kaydı güncelleme hatası:", error);
     return NextResponse.json({ error: "Sunucu hatası" }, { status: 500 });
   }
 }
@@ -71,13 +87,15 @@ export async function DELETE(
   await dbConnect();
 
   try {
-    const deletedTarla = await Tarla.findByIdAndDelete(params.id);
-    if (!deletedTarla) {
-      return NextResponse.json({ error: "Tarla bulunamadı" }, { status: 404 });
+    const deletedKayit = await SulamaKaydi.findByIdAndDelete(params.id);
+
+    if (!deletedKayit) {
+      return NextResponse.json({ error: "Kayıt bulunamadı" }, { status: 404 });
     }
-    return NextResponse.json({ message: "Tarla başarıyla silindi" });
+
+    return NextResponse.json({ message: "Kayıt başarıyla silindi" });
   } catch (error) {
-    console.error("Tarla silme hatası:", error);
+    console.error("Sulama kaydı silme hatası:", error);
     return NextResponse.json({ error: "Sunucu hatası" }, { status: 500 });
   }
 }

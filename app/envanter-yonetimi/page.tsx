@@ -34,6 +34,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { cn } from "@/lib/utils";
 
 interface Kategori {
   _id: string;
@@ -157,6 +158,44 @@ export default function EnvanterYonetimiPage() {
 
   const handleAddEnvanter = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Form validasyonu
+    if (!yeniEnvanter.ad || !yeniEnvanter.birim) {
+      toast({
+        title: "Hata",
+        description: "Envanter adı ve birim alanları zorunludur.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!yeniEnvanter.kategori_id?._id) {
+      toast({
+        title: "Hata",
+        description: "Lütfen bir kategori seçin.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if ((yeniEnvanter.miktar ?? 0) <= 0) {
+      toast({
+        title: "Hata",
+        description: "Miktar 0'dan büyük olmalıdır.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if ((yeniEnvanter.deger ?? 0) < 0) {
+      toast({
+        title: "Hata",
+        description: "Değer 0 veya daha büyük olmalıdır.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
       const response = await fetch("/api/envanter", {
         method: "POST",
@@ -240,7 +279,14 @@ export default function EnvanterYonetimiPage() {
     depth = 0
   ): React.ReactNode[] => {
     return kategoriler.flatMap((kategori) => [
-      <SelectItem key={kategori._id} value={kategori._id}>
+      <SelectItem
+        key={kategori._id}
+        value={kategori._id}
+        className={cn(
+          "transition-all duration-200",
+          "hover:bg-neon-blue hover:text-white"
+        )}
+      >
         {"\u00A0".repeat(depth * 2)}
         {kategori.ad}
       </SelectItem>,
@@ -318,6 +364,7 @@ export default function EnvanterYonetimiPage() {
                     setYeniEnvanter({ ...yeniEnvanter, ad: e.target.value })
                   }
                   className="bg-gray-700 text-neon-pink border-neon-blue"
+                  required
                 />
               </div>
               <div className="space-y-2">
@@ -335,11 +382,23 @@ export default function EnvanterYonetimiPage() {
                       },
                     })
                   }
+                  required
                 >
-                  <SelectTrigger className="bg-gray-700 text-neon-pink border-neon-blue">
+                  <SelectTrigger
+                    className={cn(
+                      "bg-gray-700 text-neon-pink border-neon-blue",
+                      "transition-all duration-200"
+                    )}
+                  >
                     <SelectValue placeholder="Kategori seçin" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent
+                    className={cn(
+                      "bg-gray-700/80 backdrop-blur-sm border-neon-blue",
+                      "text-neon-pink",
+                      "transition-all duration-200"
+                    )}
+                  >
                     {renderKategoriOptions(kategoriler)}
                   </SelectContent>
                 </Select>
@@ -351,7 +410,7 @@ export default function EnvanterYonetimiPage() {
                 <Input
                   id="miktar"
                   type="number"
-                  value={yeniEnvanter.miktar}
+                  value={yeniEnvanter.miktar ?? 0}
                   onChange={(e) =>
                     setYeniEnvanter({
                       ...yeniEnvanter,
@@ -359,6 +418,7 @@ export default function EnvanterYonetimiPage() {
                     })
                   }
                   className="bg-gray-700 text-neon-pink border-neon-blue"
+                  required
                 />
               </div>
               <div className="space-y-2">
@@ -372,6 +432,7 @@ export default function EnvanterYonetimiPage() {
                     setYeniEnvanter({ ...yeniEnvanter, birim: e.target.value })
                   }
                   className="bg-gray-700 text-neon-pink border-neon-blue"
+                  required
                 />
               </div>
               <div className="space-y-2">
@@ -381,7 +442,7 @@ export default function EnvanterYonetimiPage() {
                 <Input
                   id="deger"
                   type="number"
-                  value={yeniEnvanter.deger}
+                  value={yeniEnvanter.deger ?? 0}
                   onChange={(e) =>
                     setYeniEnvanter({
                       ...yeniEnvanter,
@@ -389,12 +450,13 @@ export default function EnvanterYonetimiPage() {
                     })
                   }
                   className="bg-gray-700 text-neon-pink border-neon-blue"
+                  required
                 />
               </div>
               <div className="space-y-2">
                 <Label className="text-neon-blue">Sahiplikler</Label>
                 {yeniEnvanter.sahiplikler?.map((sahiplik, index) => (
-                  <div key={index} className="flex items-center space-x-2 ">
+                  <div key={index} className="flex items-center space-x-2">
                     <Select
                       value={sahiplik.sahip_id?._id}
                       onValueChange={(value) =>
@@ -406,15 +468,29 @@ export default function EnvanterYonetimiPage() {
                         )
                       }
                     >
-                      <SelectTrigger className="bg-gray-700 text-neon-pink border-neon-blue">
+                      <SelectTrigger
+                        className={cn(
+                          "bg-gray-700 text-neon-pink border-neon-blue",
+                          "transition-all duration-200"
+                        )}
+                      >
                         <SelectValue placeholder="Sahip seçin" />
                       </SelectTrigger>
-                      <SelectContent>
+                      <SelectContent
+                        className={cn(
+                          "bg-gray-700/80 backdrop-blur-sm border-neon-blue",
+                          "text-neon-pink",
+                          "transition-all duration-200"
+                        )}
+                      >
                         {sahipler.map((sahip) => (
                           <SelectItem
                             key={sahip._id}
-                            className="bg-gray-700 text-neon-yellow border-neon-blue"
                             value={sahip._id}
+                            className={cn(
+                              "transition-all duration-200",
+                              "hover:bg-neon-blue hover:text-white"
+                            )}
                           >
                             {sahip.name}
                           </SelectItem>
@@ -554,10 +630,21 @@ export default function EnvanterYonetimiPage() {
                                 })
                               }
                             >
-                              <SelectTrigger className="col-span-3 bg-gray-800 text-neon-pink border-neon-blue">
+                              <SelectTrigger
+                                className={cn(
+                                  "bg-gray-800 text-neon-pink border-neon-blue",
+                                  "transition-all duration-200"
+                                )}
+                              >
                                 <SelectValue placeholder="Kategori seçin" />
                               </SelectTrigger>
-                              <SelectContent>
+                              <SelectContent
+                                className={cn(
+                                  "bg-gray-700/80 backdrop-blur-sm border-neon-blue",
+                                  "text-neon-pink",
+                                  "transition-all duration-200"
+                                )}
+                              >
                                 {renderKategoriOptions(kategoriler)}
                               </SelectContent>
                             </Select>
@@ -642,15 +729,29 @@ export default function EnvanterYonetimiPage() {
                                       )
                                     }
                                   >
-                                    <SelectTrigger className="bg-gray-700 text-neon-pink border-neon-blue">
+                                    <SelectTrigger
+                                      className={cn(
+                                        "bg-gray-700 text-neon-pink border-neon-blue",
+                                        "transition-all duration-200"
+                                      )}
+                                    >
                                       <SelectValue placeholder="Sahip seçin" />
                                     </SelectTrigger>
-                                    <SelectContent>
+                                    <SelectContent
+                                      className={cn(
+                                        "bg-gray-700/80 backdrop-blur-sm border-neon-blue",
+                                        "text-neon-pink",
+                                        "transition-all duration-200"
+                                      )}
+                                    >
                                       {sahipler.map((sahip) => (
                                         <SelectItem
                                           key={sahip._id}
                                           value={sahip._id}
-                                          className="bg-gray-700 text-neon-green border-neon-blue"
+                                          className={cn(
+                                            "transition-all duration-200",
+                                            "hover:bg-neon-blue hover:text-white"
+                                          )}
                                         >
                                           {sahip.name}
                                         </SelectItem>
@@ -701,7 +802,7 @@ export default function EnvanterYonetimiPage() {
                         <DialogFooter>
                           <Button
                             type="submit"
-                            className="bg-neon-green hover:bg-neon-blue text-green"
+                            className="bg-neon-green hover:bg-neon-blue text-black"
                           >
                             Güncelle
                           </Button>

@@ -26,5 +26,8 @@ const TarlaSahipSchema: Schema = new Schema(
   }
 );
 
-export default mongoose.models.TarlaSahip ||
+const TarlaSahip =
+  mongoose.models.TarlaSahip ||
   mongoose.model<ITarlaSahip>("TarlaSahip", TarlaSahipSchema);
+
+export default TarlaSahip;

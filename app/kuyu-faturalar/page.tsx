@@ -1,26 +1,26 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import type React from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Layout from "../components/Layout";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import {
   Card,
   CardContent,
-  CardFooter,
+  CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -29,12 +29,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Calendar } from "@/components/ui/calendar";
-import { PlusCircle, Pencil, Trash2 } from "lucide-react";
-import { useToast } from "@/components/ui/use-toast";
+import { format, addDays } from "date-fns";
+import tr from "date-fns/locale/tr";
+import { toast } from "@/components/ui/use-toast";
 import { Toaster } from "@/components/ui/toaster";
-import { format } from "date-fns";
-import { tr } from "date-fns/locale";
+import {
+  GlassWaterIcon as WaterIcon,
+  PlusCircle,
+  Pencil,
+  Trash2,
+} from "lucide-react";
 
 interface Kuyu {
   _id: string;
@@ -44,87 +48,112 @@ interface Kuyu {
 interface KuyuFatura {
   _id: string;
   kuyu_id: Kuyu;
-  tarih: string;
-  tuketim: number;
-  birim_fiyat: number;
-  toplam_tutar: number;
+  baslangic_tarihi: Date;
+  bitis_tarihi: Date;
+  tutar: number;
+  odendi: boolean;
 }
 
-export default function KuyuFaturalarPage() {
-  const [kuyular, setKuyular] = useState<Kuyu[]>([]);
-  const [kuyuFaturalar, setKuyuFaturalar] = useState<KuyuFatura[]>([]);
-  const [selectedKuyu, setSelectedKuyu] = useState<Kuyu | null>(null);
-  const [editingFatura, setEditingFatura] = useState<KuyuFatura | null>(null);
-  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
-  const [newFatura, setNewFatura] = useState<Partial<KuyuFatura>>({
-    kuyu_id: { _id: "", ad: "" },
-    tarih: "",
-    tuketim: 0,
-    birim_fiyat: 0,
-    toplam_tutar: 0,
-  });
+const KuyuFaturalarPage = () => {
   const { data: session, status } = useSession();
   const router = useRouter();
-  const { toast } = useToast();
+  const [kuyuFaturalar, setKuyuFaturalar] = useState<KuyuFatura[]>([]);
+  const [kuyular, setKuyular] = useState<Kuyu[]>([]);
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [newFatura, setNewFatura] = useState<Partial<KuyuFatura>>({
+    kuyu_id: undefined,
+    baslangic_tarihi: new Date(),
+    bitis_tarihi: addDays(new Date(), 30),
+    tutar: 0,
+    odendi: false,
+  });
+  const [editingFatura, setEditingFatura] = useState<KuyuFatura>({
+    _id: "",
+    kuyu_id: { _id: "", ad: "" },
+    baslangic_tarihi: new Date(),
+    bitis_tarihi: new Date(),
+    tutar: 0,
+    odendi: false,
+  });
 
-  const fetchKuyular = useCallback(async () => {
-    try {
-      const response = await fetch("/api/kuyular");
-      if (!response.ok) throw new Error("Kuyuları getirme hatası");
-      const data = await response.json();
-      setKuyular(data);
-    } catch (error) {
-      console.error("Kuyuları getirme hatası:", error);
-      toast({
-        title: "Hata",
-        description: "Kuyuları getirirken bir hata oluştu.",
-        variant: "destructive",
-      });
+  useEffect(() => {
+    if (status === "unauthenticated") {
+      router.push("/auth/signin");
     }
-  }, [toast]);
+  }, [status, router]);
+
+  useEffect(() => {
+    const fetchKuyular = async () => {
+      try {
+        const response = await fetch("/api/kuyular");
+        if (!response.ok) throw new Error("Kuyular çekilemedi");
+        const data = await response.json();
+        setKuyular(data);
+      } catch (error) {
+        console.error("Kuyular çekilemedi:", error);
+        toast({
+          title: "Hata",
+          description: "Kuyular yüklenirken bir hata oluştu.",
+          variant: "destructive",
+        });
+      }
+    };
+    if (session) {
+      fetchKuyular();
+    }
+  }, [session]);
 
   const fetchKuyuFaturalar = useCallback(async () => {
     try {
       const response = await fetch("/api/kuyu-faturalar");
-      if (!response.ok) throw new Error("Kuyu faturalarını getirme hatası");
+      if (!response.ok) throw new Error("Kuyu faturaları çekilemedi");
       const data = await response.json();
       setKuyuFaturalar(data);
     } catch (error) {
-      console.error("Kuyu faturalarını getirme hatası:", error);
+      console.error("Kuyu faturaları çekilemedi:", error);
       toast({
         title: "Hata",
-        description: "Kuyu faturalarını getirirken bir hata oluştu.",
+        description: "Kuyu faturaları yüklenirken bir hata oluştu.",
         variant: "destructive",
       });
     }
-  }, [toast]);
+  }, []);
 
   useEffect(() => {
-    if (status === "loading") return;
-    if (!session) {
-      router.push("/auth/signin");
-      return;
+    if (session) {
+      fetchKuyuFaturalar();
     }
-    fetchKuyular();
-    fetchKuyuFaturalar();
-  }, [session, status, router, fetchKuyular, fetchKuyuFaturalar]);
+  }, [session, fetchKuyuFaturalar]);
 
   const handleAddFatura = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!newFatura.kuyu_id) {
+      toast({
+        title: "Hata",
+        description: "Lütfen bir kuyu seçin.",
+        variant: "destructive",
+      });
+      return;
+    }
     try {
       const response = await fetch("/api/kuyu-faturalar", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(newFatura),
+        body: JSON.stringify({
+          ...newFatura,
+          baslangic_tarihi: newFatura.baslangic_tarihi?.toISOString(),
+          bitis_tarihi: newFatura.bitis_tarihi?.toISOString(),
+        }),
       });
       if (!response.ok) throw new Error("Kuyu faturası ekleme hatası");
       await fetchKuyuFaturalar();
       setNewFatura({
-        kuyu_id: { _id: "", ad: "" },
-        tarih: "",
-        tuketim: 0,
-        birim_fiyat: 0,
-        toplam_tutar: 0,
+        kuyu_id: undefined,
+        baslangic_tarihi: new Date(),
+        bitis_tarihi: addDays(new Date(), 30),
+        tutar: 0,
+        odendi: false,
       });
       setIsAddDialogOpen(false);
       toast({
@@ -141,24 +170,36 @@ export default function KuyuFaturalarPage() {
     }
   };
 
-  const handleEditFatura = async (e: React.FormEvent) => {
+  const handleEditFatura = useCallback((fatura: KuyuFatura) => {
+    setEditingFatura({
+      ...fatura,
+      baslangic_tarihi: new Date(fatura.baslangic_tarihi),
+      bitis_tarihi: new Date(fatura.bitis_tarihi),
+    });
+    setIsEditDialogOpen(true);
+  }, []);
+
+  const handleUpdateFatura = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!editingFatura) return;
     try {
       const response = await fetch(`/api/kuyu-faturalar/${editingFatura._id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(editingFatura),
+        body: JSON.stringify({
+          ...editingFatura,
+          baslangic_tarihi: editingFatura.baslangic_tarihi.toISOString(),
+          bitis_tarihi: editingFatura.bitis_tarihi.toISOString(),
+        }),
       });
-      if (!response.ok) throw new Error("Kuyu faturası güncelleme hatası");
+      if (!response.ok) throw new Error("Kuyu faturası güncellenemedi");
       await fetchKuyuFaturalar();
-      setEditingFatura(null);
+      setIsEditDialogOpen(false);
       toast({
         title: "Başarılı",
         description: "Kuyu faturası başarıyla güncellendi.",
       });
     } catch (error) {
-      console.error("Kuyu faturası güncelleme hatası:", error);
+      console.error("Kuyu faturası güncellenemedi:", error);
       toast({
         title: "Hata",
         description: "Kuyu faturası güncellenirken bir hata oluştu.",
@@ -167,88 +208,150 @@ export default function KuyuFaturalarPage() {
     }
   };
 
-  const handleDeleteFatura = async (id: string) => {
-    if (!confirm("Bu kuyu faturasını silmek istediğinizden emin misiniz?"))
-      return;
-    try {
-      const response = await fetch(`/api/kuyu-faturalar/${id}`, {
-        method: "DELETE",
-      });
-      if (!response.ok) throw new Error("Kuyu faturası silme hatası");
-      await fetchKuyuFaturalar();
-      toast({
-        title: "Başarılı",
-        description: "Kuyu faturası başarıyla silindi.",
-      });
-    } catch (error) {
-      console.error("Kuyu faturası silme hatası:", error);
-      toast({
-        title: "Hata",
-        description: "Kuyu faturası silinirken bir hata oluştu.",
-        variant: "destructive",
-      });
-    }
-  };
+  const handleDeleteFatura = useCallback(
+    async (id: string) => {
+      if (!confirm("Bu faturayı silmek istediğinizden emin misiniz?")) return;
+      try {
+        const response = await fetch(`/api/kuyu-faturalar/${id}`, {
+          method: "DELETE",
+        });
+        if (!response.ok) throw new Error("Kuyu faturası silinemedi");
+        await fetchKuyuFaturalar();
+        toast({
+          title: "Başarılı",
+          description: "Kuyu faturası başarıyla silindi.",
+        });
+      } catch (error) {
+        console.error("Kuyu faturası silinemedi:", error);
+        toast({
+          title: "Hata",
+          description: "Kuyu faturası silinirken bir hata oluştu.",
+          variant: "destructive",
+        });
+      }
+    },
+    [fetchKuyuFaturalar]
+  );
 
-  const handleKuyuChange = (kuyuId: string) => {
-    const kuyu = kuyular.find((k) => k._id === kuyuId);
-    setSelectedKuyu(kuyu || null);
-  };
+  const memoizedKuyuFaturalar = useMemo(() => kuyuFaturalar, [kuyuFaturalar]);
+
+  if (status === "loading") {
+    return (
+      <Layout>
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="text-neon-blue animate-pulse-neon">Yükleniyor...</div>
+        </div>
+      </Layout>
+    );
+  }
 
   return (
     <Layout>
-      <div className="container mx-auto p-4 space-y-6">
-        <h1 className="text-4xl font-bold text-center mb-8 text-neon-blue title-glow">
-          Kuyu Faturaları Yönetimi
-        </h1>
-
-        <div className="flex justify-between items-center mb-4">
-          <Select
-            onValueChange={handleKuyuChange}
-            value={selectedKuyu?._id || ""}
+      <div className="container mx-auto p-6 space-y-6">
+        <div className="flex justify-between items-center mb-8">
+          <h1 className="text-4xl font-bold text-neon-blue flex items-center gap-2 glow-text-blue">
+            <WaterIcon className="w-8 h-8" />
+            Kuyu Faturaları
+          </h1>
+          <Button
+            onClick={() => setIsAddDialogOpen(true)}
+            className="neon-button"
           >
-            <SelectTrigger className="w-[200px] bg-gray-800 text-neon-green border-neon-blue">
-              <SelectValue placeholder="Kuyu seçin" />
-            </SelectTrigger>
-            <SelectContent>
-              {kuyular.map((kuyu) => (
-                <SelectItem key={kuyu._id} value={kuyu._id}>
-                  {kuyu.ad}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+            <PlusCircle className="mr-2 h-4 w-4" /> Yeni Fatura Ekle
+          </Button>
+        </div>
 
-          <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-            <DialogTrigger asChild>
-              <Button className="bg-neon-purple hover:bg-neon-pink text-white">
-                <PlusCircle className="mr-2 h-4 w-4" /> Yeni Fatura Ekle
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="bg-gray-900 border-2 border-neon-green">
-              <DialogHeader>
-                <DialogTitle className="text-2xl font-bold text-neon-green">
-                  Yeni Kuyu Faturası Ekle
-                </DialogTitle>
-              </DialogHeader>
-              <form onSubmit={handleAddFatura}>
-                <div className="grid gap-4 py-4">
-                  <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="kuyu" className="text-right text-neon-blue">
-                      Kuyu
-                    </Label>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {memoizedKuyuFaturalar.map((fatura) => (
+            <Card key={fatura._id} className="card">
+              <CardHeader>
+                <CardTitle className="card-title flex items-center gap-2">
+                  <WaterIcon className="w-5 h-5 text-neon-cyan" />
+                  {fatura.kuyu_id.ad}
+                </CardTitle>
+                <CardDescription
+                  className={`text-lg font-semibold ${
+                    fatura.odendi ? "text-neon-green" : "text-neon-pink"
+                  }`}
+                >
+                  {fatura.odendi ? "Ödendi" : "Ödenmedi"}
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="card-content">
+                  <p className="flex justify-between">
+                    <span className="text-neon-blue">Tutar:</span>
+                    <span className="text-neon-pink font-bold">
+                      {fatura.tutar} TL
+                    </span>
+                  </p>
+                  <p className="flex justify-between">
+                    <span className="text-neon-blue">Başlangıç:</span>
+                    <span className="text-neon-cyan">
+                      {format(
+                        new Date(fatura.baslangic_tarihi),
+                        "d MMMM yyyy",
+                        { locale: tr }
+                      )}
+                    </span>
+                  </p>
+                  <p className="flex justify-between">
+                    <span className="text-neon-blue">Bitiş:</span>
+                    <span className="text-neon-cyan">
+                      {format(new Date(fatura.bitis_tarihi), "d MMMM yyyy", {
+                        locale: tr,
+                      })}
+                    </span>
+                  </p>
+                </div>
+                <div className="flex flex-col sm:flex-row gap-2 pt-4 w-full">
+                  <Button
+                    variant="outline"
+                    onClick={() => handleEditFatura(fatura)}
+                    className="w-full border-neon-cyan text-neon-cyan hover:bg-neon-cyan hover:text-black shadow-neon transition-all duration-300"
+                  >
+                    <Pencil className="mr-2 h-4 w-4" /> Düzenle
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => handleDeleteFatura(fatura._id)}
+                    className="w-full border-neon-pink text-neon-pink hover:bg-neon-pink hover:text-white shadow-neon transition-all duration-300"
+                  >
+                    <Trash2 className="mr-2 h-4 w-4" /> Sil
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
+        <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+          <DialogContent className="bg-secondary border-2 border-neon-purple shadow-neon-purple">
+            <DialogHeader>
+              <DialogTitle className="text-2xl font-bold text-neon-purple glow-text-purple">
+                Yeni Kuyu Faturası Ekle
+              </DialogTitle>
+            </DialogHeader>
+            <form onSubmit={handleAddFatura} className="space-y-6">
+              <div className="grid gap-4">
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="kuyu" className="text-right text-neon-blue">
+                    Kuyu
+                  </Label>
+                  <div className="col-span-3">
                     <Select
+                      value={newFatura.kuyu_id?._id || ""}
                       onValueChange={(value) =>
                         setNewFatura({
                           ...newFatura,
-                          kuyu_id: {
+                          kuyu_id: kuyular.find((k) => k._id === value) || {
                             _id: value,
-                            ad: kuyular.find((k) => k._id === value)?.ad || "",
+                            ad: "",
                           },
                         })
                       }
                     >
-                      <SelectTrigger className="col-span-3 bg-gray-800 text-neon-green border-neon-green">
+                      <SelectTrigger className="bg-secondary border-neon-blue text-neon-cyan">
                         <SelectValue placeholder="Kuyu seçin" />
                       </SelectTrigger>
                       <SelectContent>
@@ -260,307 +363,230 @@ export default function KuyuFaturalarPage() {
                       </SelectContent>
                     </Select>
                   </div>
-                  <div className="grid grid-cols-4 items-center gap-4">
-                    <Label
-                      htmlFor="tarih"
-                      className="text-right text-neon-blue"
-                    >
-                      Tarih
-                    </Label>
-                    <div className="col-span-3">
-                      <Calendar
-                        selected={
-                          newFatura.tarih
-                            ? new Date(newFatura.tarih)
-                            : undefined
-                        }
-                        onSelect={(date) =>
-                          setNewFatura({
-                            ...newFatura,
-                            tarih: date ? date.toISOString() : "",
-                          })
-                        }
-                        className="rounded-md border border-neon-blue bg-gray-800 text-neon-pink"
-                      />
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-4 items-center gap-4">
-                    <Label
-                      htmlFor="tuketim"
-                      className="text-right text-neon-blue"
-                    >
-                      Tüketim (kWh)
-                    </Label>
+                </div>
+
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="tarih" className="text-right text-neon-blue">
+                    Tarih Aralığı
+                  </Label>
+                  <div className="col-span-3 space-y-2">
                     <Input
-                      id="tuketim"
-                      type="number"
-                      value={newFatura.tuketim}
+                      type="date"
+                      value={
+                        newFatura.baslangic_tarihi?.toISOString().split("T")[0]
+                      }
                       onChange={(e) =>
                         setNewFatura({
                           ...newFatura,
-                          tuketim: Number(e.target.value),
+                          baslangic_tarihi: new Date(e.target.value),
                         })
                       }
-                      className="col-span-3 bg-gray-800 text-neon-pink border-neon-blue"
+                      className="bg-secondary border-neon-blue text-neon-cyan"
                     />
-                  </div>
-                  <div className="grid grid-cols-4 items-center gap-4">
-                    <Label
-                      htmlFor="birim_fiyat"
-                      className="text-right text-neon-blue"
-                    >
-                      Birim Fiyat (TL)
-                    </Label>
                     <Input
-                      id="birim_fiyat"
-                      type="number"
-                      step="0.01"
-                      value={newFatura.birim_fiyat}
+                      type="date"
+                      value={
+                        newFatura.bitis_tarihi?.toISOString().split("T")[0]
+                      }
                       onChange={(e) =>
                         setNewFatura({
                           ...newFatura,
-                          birim_fiyat: Number(e.target.value),
+                          bitis_tarihi: new Date(e.target.value),
                         })
                       }
-                      className="col-span-3 bg-gray-800 text-neon-pink border-neon-blue"
-                    />
-                  </div>
-                  <div className="grid grid-cols-4 items-center gap-4">
-                    <Label
-                      htmlFor="toplam_tutar"
-                      className="text-right text-neon-blue"
-                    >
-                      Toplam Tutar (TL)
-                    </Label>
-                    <Input
-                      id="toplam_tutar"
-                      type="number"
-                      step="0.01"
-                      value={newFatura.toplam_tutar}
-                      onChange={(e) =>
-                        setNewFatura({
-                          ...newFatura,
-                          toplam_tutar: Number(e.target.value),
-                        })
-                      }
-                      className="col-span-3 bg-gray-800 text-neon-pink border-neon-blue"
+                      className="bg-secondary border-neon-blue text-neon-cyan"
                     />
                   </div>
                 </div>
-                <DialogFooter>
-                  <Button
-                    type="submit"
-                    className="bg-neon-green hover:bg-neon-blue text-black"
-                  >
-                    Ekle
-                  </Button>
-                </DialogFooter>
-              </form>
-            </DialogContent>
-          </Dialog>
-        </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {kuyuFaturalar
-            .filter(
-              (fatura) =>
-                !selectedKuyu || fatura.kuyu_id._id === selectedKuyu._id
-            )
-            .map((fatura) => (
-              <Card
-                key={fatura._id}
-                className="bg-gray-800 border-2 border-neon-blue shadow-lg hover:shadow-neon-blue transition-shadow duration-300"
-              >
-                <CardHeader>
-                  <CardTitle className="text-neon-pink">
-                    {fatura.kuyu_id.ad}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-2">
-                  <p className="text-neon-blue">
-                    Tarih:{" "}
-                    <span className="text-neon-pink">
-                      {format(new Date(fatura.tarih), "d MMMM yyyy", {
-                        locale: tr,
-                      })}
-                    </span>
-                  </p>
-                  <p className="text-neon-blue">
-                    Tüketim:{" "}
-                    <span className="text-neon-pink">{fatura.tuketim} kWh</span>
-                  </p>
-                  <p className="text-neon-blue">
-                    Birim Fiyat:{" "}
-                    <span className="text-neon-pink">
-                      {fatura.birim_fiyat.toFixed(2)} TL
-                    </span>
-                  </p>
-                  <p className="text-neon-blue">
-                    Toplam Tutar:{" "}
-                    <span className="text-neon-pink">
-                      {fatura.toplam_tutar.toFixed(2)} TL
-                    </span>
-                  </p>
-                </CardContent>
-                <CardFooter className="space-x-2">
-                  <Dialog>
-                    <DialogTrigger asChild>
-                      <Button
-                        className="bg-neon-cyan hover:bg-neon-blue text-black"
-                        onClick={() => setEditingFatura(fatura)}
-                      >
-                        <Pencil className="mr-2 h-4 w-4" /> Düzenle
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent className="bg-gray-900 border-2 border-neon-green">
-                      <DialogHeader>
-                        <DialogTitle className="text-2xl font-bold text-neon-green">
-                          Kuyu Faturası Düzenle
-                        </DialogTitle>
-                      </DialogHeader>
-                      {editingFatura && (
-                        <form onSubmit={handleEditFatura}>
-                          <div className="grid gap-4 py-4">
-                            <div className="grid grid-cols-4 items-center gap-4">
-                              <Label
-                                htmlFor="edit-kuyu"
-                                className="text-right text-neon-blue"
-                              >
-                                Kuyu
-                              </Label>
-                              <Select
-                                value={editingFatura.kuyu_id._id}
-                                onValueChange={(value) =>
-                                  setEditingFatura({
-                                    ...editingFatura,
-                                    kuyu_id: {
-                                      _id: value,
-                                      ad:
-                                        kuyular.find((k) => k._id === value)
-                                          ?.ad || "",
-                                    },
-                                  })
-                                }
-                              >
-                                <SelectTrigger className="col-span-3 bg-gray-800 text-neon-green border-neon-green">
-                                  <SelectValue placeholder="Kuyu seçin" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {kuyular.map((kuyu) => (
-                                    <SelectItem key={kuyu._id} value={kuyu._id}>
-                                      {kuyu.ad}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            </div>
-                            <div className="grid grid-cols-4 items-center gap-4">
-                              <Label
-                                htmlFor="edit-tarih"
-                                className="text-right text-neon-blue"
-                              >
-                                Tarih
-                              </Label>
-                              <div className="col-span-3">
-                                <Calendar
-                                  selected={new Date(editingFatura.tarih)}
-                                  onSelect={(date) =>
-                                    setEditingFatura({
-                                      ...editingFatura,
-                                      tarih: date ? date.toISOString() : "",
-                                    })
-                                  }
-                                  className="rounded-md border border-neon-blue bg-gray-800 text-neon-pink"
-                                />
-                              </div>
-                            </div>
-                            <div className="grid grid-cols-4 items-center gap-4">
-                              <Label
-                                htmlFor="edit-tuketim"
-                                className="text-right text-neon-blue"
-                              >
-                                Tüketim (kWh)
-                              </Label>
-                              <Input
-                                id="edit-tuketim"
-                                type="number"
-                                value={editingFatura.tuketim}
-                                onChange={(e) =>
-                                  setEditingFatura({
-                                    ...editingFatura,
-                                    tuketim: Number(e.target.value),
-                                  })
-                                }
-                                className="col-span-3 bg-gray-800 text-neon-pink border-neon-blue"
-                              />
-                            </div>
-                            <div className="grid grid-cols-4 items-center gap-4">
-                              <Label
-                                htmlFor="edit-birim_fiyat"
-                                className="text-right text-neon-blue"
-                              >
-                                Birim Fiyat (TL)
-                              </Label>
-                              <Input
-                                id="edit-birim_fiyat"
-                                type="number"
-                                step="0.01"
-                                value={editingFatura.birim_fiyat}
-                                onChange={(e) =>
-                                  setEditingFatura({
-                                    ...editingFatura,
-                                    birim_fiyat: Number(e.target.value),
-                                  })
-                                }
-                                className="col-span-3 bg-gray-800 text-neon-pink border-neon-blue"
-                              />
-                            </div>
-                            <div className="grid grid-cols-4 items-center gap-4">
-                              <Label
-                                htmlFor="edit-toplam_tutar"
-                                className="text-right text-neon-blue"
-                              >
-                                Toplam Tutar (TL)
-                              </Label>
-                              <Input
-                                id="edit-toplam_tutar"
-                                type="number"
-                                step="0.01"
-                                value={editingFatura.toplam_tutar}
-                                onChange={(e) =>
-                                  setEditingFatura({
-                                    ...editingFatura,
-                                    toplam_tutar: Number(e.target.value),
-                                  })
-                                }
-                                className="col-span-3 bg-gray-800 text-neon-pink border-neon-blue"
-                              />
-                            </div>
-                          </div>
-                          <DialogFooter>
-                            <Button
-                              type="submit"
-                              className="bg-neon-green hover:bg-neon-blue text-black"
-                            >
-                              Güncelle
-                            </Button>
-                          </DialogFooter>
-                        </form>
-                      )}
-                    </DialogContent>
-                  </Dialog>
-                  <Button
-                    className="bg-neon-red hover:bg-neon-pink text-white"
-                    onClick={() => handleDeleteFatura(fatura._id)}
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="tutar" className="text-right text-neon-blue">
+                    Tutar
+                  </Label>
+                  <div className="col-span-3">
+                    <Input
+                      id="tutar"
+                      type="number"
+                      value={newFatura.tutar}
+                      onChange={(e) =>
+                        setNewFatura({
+                          ...newFatura,
+                          tutar: Number(e.target.value),
+                        })
+                      }
+                      className="bg-secondary border-neon-blue text-neon-cyan"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="odendi" className="text-right text-neon-blue">
+                    Ödendi
+                  </Label>
+                  <div className="col-span-3">
+                    <input
+                      type="checkbox"
+                      id="odendi"
+                      checked={newFatura.odendi}
+                      onChange={(e) =>
+                        setNewFatura({ ...newFatura, odendi: e.target.checked })
+                      }
+                      className="w-5 h-5 rounded border-neon-blue text-neon-purple focus:ring-neon-purple"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <DialogFooter>
+                <Button type="submit" className="neon-button">
+                  Ekle
+                </Button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+          <DialogContent className="bg-secondary border-2 border-neon-purple shadow-neon-purple">
+            <DialogHeader>
+              <DialogTitle className="text-2xl font-bold text-neon-purple glow-text-purple">
+                Kuyu Faturası Düzenle
+              </DialogTitle>
+            </DialogHeader>
+            <form onSubmit={handleUpdateFatura} className="space-y-6">
+              <div className="grid gap-4">
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label
+                    htmlFor="edit-kuyu"
+                    className="text-right text-neon-blue"
                   >
-                    <Trash2 className="mr-2 h-4 w-4" /> Sil
-                  </Button>
-                </CardFooter>
-              </Card>
-            ))}
-        </div>
+                    Kuyu
+                  </Label>
+                  <div className="col-span-3">
+                    <Select
+                      value={editingFatura.kuyu_id._id}
+                      onValueChange={(value) =>
+                        setEditingFatura({
+                          ...editingFatura,
+                          kuyu_id: {
+                            _id: value,
+                            ad: kuyular.find((k) => k._id === value)?.ad || "",
+                          },
+                        })
+                      }
+                    >
+                      <SelectTrigger className="bg-secondary border-neon-blue text-neon-cyan">
+                        <SelectValue placeholder="Kuyu seçin" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {kuyular.map((kuyu) => (
+                          <SelectItem key={kuyu._id} value={kuyu._id}>
+                            {kuyu.ad}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label
+                    htmlFor="edit-tarih"
+                    className="text-right text-neon-blue"
+                  >
+                    Tarih Aralığı
+                  </Label>
+                  <div className="col-span-3 space-y-2">
+                    <Input
+                      type="date"
+                      value={
+                        editingFatura.baslangic_tarihi
+                          .toISOString()
+                          .split("T")[0]
+                      }
+                      onChange={(e) =>
+                        setEditingFatura({
+                          ...editingFatura,
+                          baslangic_tarihi: new Date(e.target.value),
+                        })
+                      }
+                      className="bg-secondary border-neon-blue text-neon-cyan"
+                    />
+                    <Input
+                      type="date"
+                      value={
+                        editingFatura.bitis_tarihi.toISOString().split("T")[0]
+                      }
+                      onChange={(e) =>
+                        setEditingFatura({
+                          ...editingFatura,
+                          bitis_tarihi: new Date(e.target.value),
+                        })
+                      }
+                      className="bg-secondary border-neon-blue text-neon-cyan"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label
+                    htmlFor="edit-tutar"
+                    className="text-right text-neon-blue"
+                  >
+                    Tutar
+                  </Label>
+                  <div className="col-span-3">
+                    <Input
+                      id="edit-tutar"
+                      type="number"
+                      value={editingFatura.tutar}
+                      onChange={(e) =>
+                        setEditingFatura({
+                          ...editingFatura,
+                          tutar: Number(e.target.value),
+                        })
+                      }
+                      className="bg-secondary border-neon-blue text-neon-cyan"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label
+                    htmlFor="edit-odendi"
+                    className="text-right text-neon-blue"
+                  >
+                    Ödendi
+                  </Label>
+                  <div className="col-span-3">
+                    <input
+                      type="checkbox"
+                      id="edit-odendi"
+                      checked={editingFatura.odendi}
+                      onChange={(e) =>
+                        setEditingFatura({
+                          ...editingFatura,
+                          odendi: e.target.checked,
+                        })
+                      }
+                      className="w-5 h-5 rounded border-neon-blue text-neon-purple focus:ring-neon-purple"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <DialogFooter>
+                <Button type="submit" className="neon-button">
+                  Güncelle
+                </Button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        </Dialog>
       </div>
       <Toaster />
     </Layout>
   );
-}
+};
+
+export default KuyuFaturalarPage;

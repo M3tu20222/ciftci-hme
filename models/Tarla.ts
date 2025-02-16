@@ -12,7 +12,7 @@ export interface ITarla extends Document {
   ada_parsel: string;
   sezon_id: mongoose.Types.ObjectId;
   urun_id: mongoose.Types.ObjectId;
-  kuyu_id?: mongoose.Types.ObjectId;
+  kuyu_id: mongoose.Types.ObjectId; // Changed from kuyular array to single kuyu_id
   created_by: mongoose.Types.ObjectId;
 }
 
@@ -26,7 +26,7 @@ const TarlaSchema: Schema = new Schema(
     ada_parsel: { type: String, required: true },
     sezon_id: { type: Schema.Types.ObjectId, ref: "Sezon", required: true },
     urun_id: { type: Schema.Types.ObjectId, ref: "Urun", required: true },
-    kuyu_id: { type: Schema.Types.ObjectId, ref: "Kuyu", required: false },
+    kuyu_id: { type: Schema.Types.ObjectId, ref: "Kuyu" }, // Changed from kuyular array to single kuyu_id
     created_by: { type: Schema.Types.ObjectId, ref: "User", required: true },
   },
   {
