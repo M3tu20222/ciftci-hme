@@ -32,7 +32,7 @@ import {
 import { format, addDays } from "date-fns";
 import tr from "date-fns/locale/tr";
 import { toast } from "@/components/ui/use-toast";
-import { Toaster } from "@/components/ui/toaster";
+import {Toaster} from "@/components/ui/toaster";
 import {
   GlassWaterIcon as WaterIcon,
   PlusCircle,
@@ -52,6 +52,8 @@ interface KuyuFatura {
   bitis_tarihi: Date;
   tutar: number;
   odendi: boolean;
+  son_odeme_tarihi: Date;
+  odeme_durumu: string;
 }
 
 const KuyuFaturalarPage = () => {
@@ -67,6 +69,8 @@ const KuyuFaturalarPage = () => {
     bitis_tarihi: addDays(new Date(), 30),
     tutar: 0,
     odendi: false,
+    son_odeme_tarihi: addDays(new Date(), 30),
+    odeme_durumu: "Ödenmedi",
   });
   const [editingFatura, setEditingFatura] = useState<KuyuFatura>({
     _id: "",
@@ -75,6 +79,8 @@ const KuyuFaturalarPage = () => {
     bitis_tarihi: new Date(),
     tutar: 0,
     odendi: false,
+    son_odeme_tarihi: new Date(),
+    odeme_durumu: "Ödenmedi",
   });
 
   useEffect(() => {
@@ -144,6 +150,7 @@ const KuyuFaturalarPage = () => {
           ...newFatura,
           baslangic_tarihi: newFatura.baslangic_tarihi?.toISOString(),
           bitis_tarihi: newFatura.bitis_tarihi?.toISOString(),
+          son_odeme_tarihi: newFatura.son_odeme_tarihi?.toISOString(),
         }),
       });
       if (!response.ok) throw new Error("Kuyu faturası ekleme hatası");
@@ -154,6 +161,8 @@ const KuyuFaturalarPage = () => {
         bitis_tarihi: addDays(new Date(), 30),
         tutar: 0,
         odendi: false,
+        son_odeme_tarihi: addDays(new Date(), 30),
+        odeme_durumu: "Ödenmedi",
       });
       setIsAddDialogOpen(false);
       toast({
@@ -175,6 +184,7 @@ const KuyuFaturalarPage = () => {
       ...fatura,
       baslangic_tarihi: new Date(fatura.baslangic_tarihi),
       bitis_tarihi: new Date(fatura.bitis_tarihi),
+      son_odeme_tarihi: new Date(fatura.son_odeme_tarihi),
     });
     setIsEditDialogOpen(true);
   }, []);
@@ -189,6 +199,7 @@ const KuyuFaturalarPage = () => {
           ...editingFatura,
           baslangic_tarihi: editingFatura.baslangic_tarihi.toISOString(),
           bitis_tarihi: editingFatura.bitis_tarihi.toISOString(),
+          son_odeme_tarihi: editingFatura.son_odeme_tarihi.toISOString(),
         }),
       });
       if (!response.ok) throw new Error("Kuyu faturası güncellenemedi");
@@ -301,6 +312,18 @@ const KuyuFaturalarPage = () => {
                       {format(new Date(fatura.bitis_tarihi), "d MMMM yyyy", {
                         locale: tr,
                       })}
+                    </span>
+                  </p>
+                  <p className="flex justify-between">
+                    <span className="text-neon-blue">Son Ödeme Tarihi:</span>
+                    <span className="text-neon-cyan">
+                      {format(
+                        new Date(fatura.son_odeme_tarihi),
+                        "d MMMM yyyy",
+                        {
+                          locale: tr,
+                        }
+                      )}
                     </span>
                   </p>
                 </div>
@@ -434,6 +457,29 @@ const KuyuFaturalarPage = () => {
                       className="w-5 h-5 rounded border-neon-blue text-neon-purple focus:ring-neon-purple"
                     />
                   </div>
+                </div>
+                <div className="grid gap-2">
+                  <Label
+                    htmlFor="son_odeme_tarihi"
+                    className="text-right text-neon-blue"
+                  >
+                    Son Ödeme Tarihi
+                  </Label>
+                  <Input
+                    id="son_odeme_tarihi"
+                    type="date"
+                    value={
+                      newFatura.son_odeme_tarihi?.toISOString().split("T")[0] ||
+                      ""
+                    }
+                    onChange={(e) =>
+                      setNewFatura({
+                        ...newFatura,
+                        son_odeme_tarihi: new Date(e.target.value),
+                      })
+                    }
+                    className="bg-gray-800 text-neon-pink border-neon-blue"
+                  />
                 </div>
               </div>
 

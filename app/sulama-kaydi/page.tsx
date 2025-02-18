@@ -34,7 +34,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { PlusCircle, Pencil, Trash2 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
-import { Toaster } from "@/components/ui/toaster";
+import  { Toaster } from "@/components/ui/toaster";
 
 interface SulamaKaydi {
   _id: string;

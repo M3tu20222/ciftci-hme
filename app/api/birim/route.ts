@@ -2,11 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import dbConnect from "@/lib/mongodb";
-import KuyuFatura from "@/models/KuyuFatura";
-import Kuyu from "@/models/Kuyu";
-
-// Ensure Kuyu model is registered
-Kuyu;
+import Birim from "@/models/Birim";
 
 export async function GET(request: Request) {
   const session = await getServerSession(authOptions);
@@ -18,14 +14,10 @@ export async function GET(request: Request) {
   await dbConnect();
 
   try {
-    const kuyuFaturalar = await KuyuFatura.find({})
-      .populate("kuyu_id", "ad")
-      .sort({ baslangic_tarihi: -1 })
-      .lean();
-
-    return NextResponse.json(kuyuFaturalar);
+    const birimler = await Birim.find({ aktif: true });
+    return NextResponse.json(birimler);
   } catch (error: any) {
-    console.error("Kuyu faturaları getirme hatası:", error);
+    console.error("Birimleri getirme hatası:", error);
     return NextResponse.json(
       { error: "Sunucu hatası", details: error?.message || "Bilinmeyen hata" },
       { status: 500 }
@@ -44,14 +36,11 @@ export async function POST(request: Request) {
 
   try {
     const body = await request.json();
-    const yeniKuyuFatura = new KuyuFatura({
-      ...body,
-      created_by: session.user.id,
-    });
-    await yeniKuyuFatura.save();
-    return NextResponse.json(yeniKuyuFatura, { status: 201 });
+    const yeniBirim = new Birim(body);
+    await yeniBirim.save();
+    return NextResponse.json(yeniBirim, { status: 201 });
   } catch (error: any) {
-    console.error("Kuyu faturası ekleme hatası:", error);
+    console.error("Birim ekleme hatası:", error);
     return NextResponse.json(
       { error: "Sunucu hatası", details: error?.message || "Bilinmeyen hata" },
       { status: 500 }

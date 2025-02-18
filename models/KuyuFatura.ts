@@ -7,6 +7,8 @@ export interface IKuyuFatura extends Document {
   tutar: number;
   odendi: boolean;
   created_by: mongoose.Types.ObjectId;
+  son_odeme_tarihi: Date;
+  odeme_durumu: string;
 }
 
 const KuyuFaturaSchema: Schema = new Schema(
@@ -17,6 +19,8 @@ const KuyuFaturaSchema: Schema = new Schema(
     tutar: { type: Number, required: true },
     odendi: { type: Boolean, default: false },
     created_by: { type: Schema.Types.ObjectId, ref: "User", required: true },
+    son_odeme_tarihi: { type: Date, required: true },
+    odeme_durumu: { type: String, required: true, default: "Ödenmedi" },
   },
   { timestamps: true }
 );

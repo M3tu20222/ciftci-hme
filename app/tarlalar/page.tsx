@@ -322,7 +322,7 @@ export default function TarlalarPage() {
                       onCheckedChange={(checked: boolean) =>
                         setYeniTarla({ ...yeniTarla, sulanan: checked })
                       }
-                      className="col-span-3"
+                      className="col-span-3 "
                     />
                   </div>
                   <div className="grid grid-cols-4 items-center gap-4">
@@ -380,7 +380,11 @@ export default function TarlalarPage() {
                       </SelectTrigger>
                       <SelectContent>
                         {sezonlar.map((sezon) => (
-                          <SelectItem key={sezon._id} value={sezon._id}>
+                          <SelectItem
+                            key={sezon._id}
+                            value={sezon._id}
+                            className="text-neon-yellow hover:bg-neon-blue/20 focus:bg-neon-blue/20 focus:text-neon-pink" // text-neon-yellow sınıfı eklendi
+                          >
                             {sezon.ad}
                           </SelectItem>
                         ))}
@@ -404,7 +408,11 @@ export default function TarlalarPage() {
                       </SelectTrigger>
                       <SelectContent>
                         {urunler.map((urun) => (
-                          <SelectItem key={urun._id} value={urun._id}>
+                          <SelectItem
+                            key={urun._id}
+                            value={urun._id}
+                            className="text-neon-cyan hover:bg-neon-blue/20 focus:bg-neon-blue/20 focus:text-neon-pink" // text-neon-yellow sınıfı eklendi
+                          >
                             {urun.ad}
                           </SelectItem>
                         ))}

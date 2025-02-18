@@ -6,7 +6,6 @@ import { useRouter } from "next/navigation";
 import Layout from "../components/Layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -16,7 +15,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "@/components/ui/use-toast";
-import { Toaster } from "@/components/ui/toaster";
+import  {Toaster} from "@/components/ui/toaster";
 import {
   GlassWaterIcon as WaterIcon,
   Clock,
@@ -37,11 +36,18 @@ interface Kuyu {
   ad: string;
 }
 
+interface KuyuFatura {
+  _id: string;
+  kuyu_id: string;
+  baslangic_tarihi: string;
+  bitis_tarihi: string;
+  tutar: number;
+}
+
 interface SahipAnalizi {
   sahip: {
     _id: string;
-    ad: string;
-    soyad: string;
+    name: string;
   };
   toplamSure: number;
   toplamMaliyet: number;
@@ -55,6 +61,7 @@ interface AnalizSonucu {
   };
   birimMaliyet: number;
   sahipAnalizi: SahipAnalizi[];
+  toplamFaturaDegeri: number;
 }
 
 const COLORS = [
@@ -71,8 +78,8 @@ export default function SulamaAnaliziPage() {
   const router = useRouter();
   const [kuyular, setKuyular] = useState<Kuyu[]>([]);
   const [selectedKuyu, setSelectedKuyu] = useState<string>("");
-  const [baslangicTarihi, setBaslangicTarihi] = useState<string>("");
-  const [bitisTarihi, setBitisTarihi] = useState<string>("");
+  const [kuyuFaturalar, setKuyuFaturalar] = useState<KuyuFatura[]>([]);
+  const [selectedFatura, setSelectedFatura] = useState<string>("");
   const [analizSonucu, setAnalizSonucu] = useState<AnalizSonucu | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -88,7 +95,7 @@ export default function SulamaAnaliziPage() {
         const response = await fetch("/api/kuyular");
         if (!response.ok) throw new Error("Kuyular çekilemedi");
         const data = await response.json();
-        setKuyular(data);
+        setKuyular([{ _id: "total", ad: "Toplam" }, ...data]);
       } catch (error) {
         console.error("Kuyular çekilemedi:", error);
         toast({
@@ -103,11 +110,34 @@ export default function SulamaAnaliziPage() {
     }
   }, [session]);
 
+  useEffect(() => {
+    const fetchKuyuFaturalar = async () => {
+      if (selectedKuyu) {
+        try {
+          const response = await fetch(
+            `/api/kuyu-faturalar?kuyu_id=${selectedKuyu}`
+          );
+          if (!response.ok) throw new Error("Kuyu faturaları çekilemedi");
+          const data = await response.json();
+          setKuyuFaturalar(data);
+        } catch (error) {
+          console.error("Kuyu faturaları çekilemedi:", error);
+          toast({
+            title: "Hata",
+            description: "Kuyu faturaları yüklenirken bir hata oluştu.",
+            variant: "destructive",
+          });
+        }
+      }
+    };
+    fetchKuyuFaturalar();
+  }, [selectedKuyu]);
+
   const handleAnalizYap = async () => {
-    if (!selectedKuyu || !baslangicTarihi || !bitisTarihi) {
+    if (!selectedKuyu || !selectedFatura) {
       toast({
         title: "Hata",
-        description: "Lütfen tüm alanları doldurun.",
+        description: "Lütfen kuyu ve fatura seçin.",
         variant: "destructive",
       });
       return;
@@ -115,8 +145,13 @@ export default function SulamaAnaliziPage() {
 
     setLoading(true);
     try {
+      const selectedFaturaData = kuyuFaturalar.find(
+        (fatura) => fatura._id === selectedFatura
+      );
+      if (!selectedFaturaData) throw new Error("Seçilen fatura bulunamadı");
+
       const response = await fetch(
-        `/api/sulama-analizi?kuyu_id=${selectedKuyu}&baslangic=${baslangicTarihi}&bitis=${bitisTarihi}`
+        `/api/sulama-analizi?kuyu_id=${selectedKuyu}&baslangic=${selectedFaturaData.baslangic_tarihi}&bitis=${selectedFaturaData.bitis_tarihi}`
       );
       if (!response.ok) throw new Error("Analiz yapılırken bir hata oluştu");
       const data = await response.json();
@@ -171,18 +206,22 @@ export default function SulamaAnaliziPage() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="kuyu" className="text-neon-blue">
                   Kuyu
                 </Label>
                 <Select value={selectedKuyu} onValueChange={setSelectedKuyu}>
-                  <SelectTrigger className="bg-gray-800 border-neon-blue">
+                  <SelectTrigger className="bg-gray-800 text-neon-green border-neon-blue">
                     <SelectValue placeholder="Kuyu seçin" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="bg-gray-800 border-neon-blue">
                     {kuyular.map((kuyu) => (
-                      <SelectItem key={kuyu._id} value={kuyu._id}>
+                      <SelectItem
+                        key={kuyu._id}
+                        value={kuyu._id}
+                        className="text-neon-cyan hover:bg-gray-700"
+                      >
                         {kuyu.ad}
                       </SelectItem>
                     ))}
@@ -190,28 +229,32 @@ export default function SulamaAnaliziPage() {
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="baslangic" className="text-neon-blue">
-                  Başlangıç Tarihi
+                <Label htmlFor="fatura" className="text-neon-blue">
+                  Fatura
                 </Label>
-                <Input
-                  id="baslangic"
-                  type="date"
-                  value={baslangicTarihi}
-                  onChange={(e) => setBaslangicTarihi(e.target.value)}
-                  className="bg-gray-800 border-neon-blue"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="bitis" className="text-neon-blue">
-                  Bitiş Tarihi
-                </Label>
-                <Input
-                  id="bitis"
-                  type="date"
-                  value={bitisTarihi}
-                  onChange={(e) => setBitisTarihi(e.target.value)}
-                  className="bg-gray-800 border-neon-blue"
-                />
+                <Select
+                  value={selectedFatura}
+                  onValueChange={setSelectedFatura}
+                >
+                  <SelectTrigger className="bg-gray-800 text-neon-green border-neon-blue">
+                    <SelectValue placeholder="Fatura seçin" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-gray-800 border-neon-blue">
+                    {kuyuFaturalar.map((fatura) => (
+                      <SelectItem
+                        key={fatura._id}
+                        value={fatura._id}
+                        className="text-neon-cyan hover:bg-gray-700"
+                      >
+                        {`${new Date(
+                          fatura.baslangic_tarihi
+                        ).toLocaleDateString()} - ${new Date(
+                          fatura.bitis_tarihi
+                        ).toLocaleDateString()} (${formatPara(fatura.tutar)})`}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
             <Button
@@ -226,7 +269,9 @@ export default function SulamaAnaliziPage() {
 
         {analizSonucu && (
           <div className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+              {" "}
+              {/* Updated to 4 columns */}
               <Card className="bg-gray-900 border-neon-cyan">
                 <CardHeader>
                   <CardTitle className="text-xl text-neon-cyan flex items-center gap-2">
@@ -240,7 +285,6 @@ export default function SulamaAnaliziPage() {
                   </p>
                 </CardContent>
               </Card>
-
               <Card className="bg-gray-900 border-neon-green">
                 <CardHeader>
                   <CardTitle className="text-xl text-neon-green flex items-center gap-2">
@@ -254,7 +298,6 @@ export default function SulamaAnaliziPage() {
                   </p>
                 </CardContent>
               </Card>
-
               <Card className="bg-gray-900 border-neon-pink">
                 <CardHeader>
                   <CardTitle className="text-xl text-neon-pink flex items-center gap-2">
@@ -265,6 +308,19 @@ export default function SulamaAnaliziPage() {
                 <CardContent>
                   <p className="text-2xl font-bold text-white">
                     {formatPara(analizSonucu.birimMaliyet)} / dakika
+                  </p>
+                </CardContent>
+              </Card>
+              <Card className="bg-gray-900 border-neon-yellow">
+                <CardHeader>
+                  <CardTitle className="text-xl text-neon-yellow flex items-center gap-2">
+                    <DollarSign className="h-5 w-5" />
+                    Toplam Fatura Değeri
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-2xl font-bold text-white">
+                    {formatPara(analizSonucu.toplamFaturaDegeri)}
                   </p>
                 </CardContent>
               </Card>
@@ -287,7 +343,7 @@ export default function SulamaAnaliziPage() {
                       >
                         <CardHeader>
                           <CardTitle className="text-lg text-neon-blue">
-                            {sahip.sahip.ad} {sahip.sahip.soyad}
+                            {sahip.sahip.name}
                           </CardTitle>
                         </CardHeader>
                         <CardContent className="space-y-2">
@@ -319,7 +375,7 @@ export default function SulamaAnaliziPage() {
                       <PieChart>
                         <Pie
                           data={analizSonucu.sahipAnalizi.map((sahip) => ({
-                            name: `${sahip.sahip.ad} ${sahip.sahip.soyad}`,
+                            name: sahip.sahip.name,
                             value: sahip.toplamMaliyet,
                           }))}
                           cx="50%"
@@ -357,4 +413,3 @@ export default function SulamaAnaliziPage() {
     </Layout>
   );
 }
-    
