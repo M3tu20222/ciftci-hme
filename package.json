@@ -6,8 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint",
-    "seedBorcTurleri": "ts-node scripts/seedBorcTurleri.ts"
+    "lint": "next lint"
+    
   },
   "dependencies": {
     "@auth/core": "latest",
