@@ -2,8 +2,9 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import dbConnect from "@/lib/mongodb";
+import {Kategori} from "@/models/Kategori";
 import Envanter from "@/models/Envanter";
-
+Kategori
 export async function GET(
   request: Request,
   { params }: { params: { id: string } }
@@ -47,9 +48,14 @@ export async function PUT(
 
   try {
     const body = await request.json();
-    const updatedEnvanter = await Envanter.findByIdAndUpdate(params.id, body, {
-      new: true,
-    });
+    const updatedEnvanter = await Envanter.findByIdAndUpdate(
+      params.id,
+      {
+        ...body,
+        yakitTuketimi: body.yakitTuketimi || 0, // Ensure yakitTuketimi is always a number
+      },
+      { new: true }
+    );
     if (!updatedEnvanter) {
       return NextResponse.json(
         { error: "Envanter bulunamadı" },

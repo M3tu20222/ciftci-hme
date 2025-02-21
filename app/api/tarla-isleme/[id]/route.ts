@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import TarlaIsleme from "@/models/TarlaIsleme";
 import dbConnect from "@/lib/mongodb";
+import TarlaIsleme from "@/models/TarlaIsleme";
 
 export async function GET(
   request: Request,
@@ -17,19 +17,24 @@ export async function GET(
   await dbConnect();
 
   try {
-    const tarlaIsleme = await TarlaIsleme.findById(params.id).populate(
-      "tarla_id"
-    );
+    const tarlaIsleme = await TarlaIsleme.findById(params.id)
+      .populate("tarla_id", "ad")
+      .populate("created_by", "name");
+
     if (!tarlaIsleme) {
       return NextResponse.json(
-        { error: "Tarla işleme bulunamadı" },
+        { error: "Tarla işleme kaydı bulunamadı" },
         { status: 404 }
       );
     }
+
     return NextResponse.json(tarlaIsleme);
-  } catch (error) {
+  } catch (error: any) {
     console.error("Tarla işleme getirme hatası:", error);
-    return NextResponse.json({ error: "Sunucu hatası" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Sunucu hatası", details: error?.message || "Bilinmeyen hata" },
+      { status: 500 }
+    );
   }
 }
 
@@ -52,16 +57,21 @@ export async function PUT(
       body,
       { new: true }
     );
+
     if (!updatedTarlaIsleme) {
       return NextResponse.json(
-        { error: "Tarla işleme bulunamadı" },
+        { error: "Tarla işleme kaydı bulunamadı" },
         { status: 404 }
       );
     }
+
     return NextResponse.json(updatedTarlaIsleme);
-  } catch (error) {
+  } catch (error: any) {
     console.error("Tarla işleme güncelleme hatası:", error);
-    return NextResponse.json({ error: "Sunucu hatası" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Sunucu hatası", details: error?.message || "Bilinmeyen hata" },
+      { status: 500 }
+    );
   }
 }
 
@@ -79,15 +89,22 @@ export async function DELETE(
 
   try {
     const deletedTarlaIsleme = await TarlaIsleme.findByIdAndDelete(params.id);
+
     if (!deletedTarlaIsleme) {
       return NextResponse.json(
-        { error: "Tarla işleme bulunamadı" },
+        { error: "Tarla işleme kaydı bulunamadı" },
         { status: 404 }
       );
     }
-    return NextResponse.json({ message: "Tarla işleme başarıyla silindi" });
-  } catch (error) {
+
+    return NextResponse.json({
+      message: "Tarla işleme kaydı başarıyla silindi",
+    });
+  } catch (error: any) {
     console.error("Tarla işleme silme hatası:", error);
-    return NextResponse.json({ error: "Sunucu hatası" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Sunucu hatası", details: error?.message || "Bilinmeyen hata" },
+      { status: 500 }
+    );
   }
 }

@@ -12,6 +12,7 @@ export interface IEnvanter extends Document {
   birim: string;
   deger: number;
   sahiplikler: ISahiplik[];
+  yakitTuketimi: number; // New field for fuel consumption
 }
 
 const EnvanterSchema: Schema = new Schema(
@@ -32,6 +33,7 @@ const EnvanterSchema: Schema = new Schema(
         yuzde: { type: Number, required: true, min: 0, max: 100 },
       },
     ],
+    yakitTuketimi: { type: Number, default: 0 }, // New field for fuel consumption
   },
   { timestamps: true }
 );

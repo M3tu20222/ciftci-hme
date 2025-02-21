@@ -70,6 +70,7 @@ interface Envanter {
     };
     yuzde: number;
   }>;
+  yakitTuketimi: number; // New field for fuel consumption
 }
 
 export default function EnvanterYonetimiPage() {
@@ -83,6 +84,7 @@ export default function EnvanterYonetimiPage() {
     birim: "",
     deger: 0,
     sahiplikler: [],
+    yakitTuketimi: 0, // Initialize with 0 instead of undefined
   });
   const [editingEnvanter, setEditingEnvanter] = useState<Envanter | null>(null);
   const { data: session, status } = useSession();
@@ -211,6 +213,7 @@ export default function EnvanterYonetimiPage() {
         birim: "",
         deger: 0,
         sahiplikler: [],
+        yakitTuketimi: 0,
       });
       toast({
         title: "Başarılı",
@@ -233,7 +236,10 @@ export default function EnvanterYonetimiPage() {
       const response = await fetch(`/api/envanter/${editingEnvanter._id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(editingEnvanter),
+        body: JSON.stringify({
+          ...editingEnvanter,
+          yakitTuketimi: editingEnvanter.yakitTuketimi || 0, // Ensure yakitTuketimi is always a number
+        }),
       });
       if (!response.ok) throw new Error("Envanter güncelleme hatası");
       await fetchEnvanterler();
@@ -530,6 +536,24 @@ export default function EnvanterYonetimiPage() {
                   <PlusCircle className="mr-2 h-4 w-4" /> Sahiplik Ekle
                 </Button>
               </div>
+              <div className="space-y-2">
+                <Label htmlFor="yakitTuketimi" className="text-neon-blue">
+                  Yakıt Bilgisi (Litre/Dekar)
+                </Label>
+                <Input
+                  id="yakitTuketimi"
+                  type="number"
+                  value={yeniEnvanter.yakitTuketimi ?? 0}
+                  onChange={(e) =>
+                    setYeniEnvanter({
+                      ...yeniEnvanter,
+                      yakitTuketimi: Number(e.target.value),
+                    })
+                  }
+                  className="bg-gray-700 text-neon-pink border-neon-blue"
+                  required
+                />
+              </div>
               <Button
                 type="submit"
                 className="w-full bg-neon-green hover:bg-neon-blue text-black"
@@ -570,6 +594,9 @@ export default function EnvanterYonetimiPage() {
                     </ul>
                   </div>
                 )}
+                <p className="text-neon-blue">
+                  Yakıt Tüketimi: {envanter.yakitTuketimi} Litre/Dekar
+                </p>
               </CardContent>
               <CardFooter className="flex justify-between">
                 <Dialog>
@@ -703,6 +730,26 @@ export default function EnvanterYonetimiPage() {
                                 setEditingEnvanter({
                                   ...editingEnvanter,
                                   deger: Number(e.target.value),
+                                })
+                              }
+                              className="col-span-3 bg-gray-800 text-neon-pink border-neon-blue"
+                            />
+                          </div>
+                          <div className="grid grid-cols-4 items-center gap-4">
+                            <Label
+                              htmlFor="edit-yakitTuketimi"
+                              className="text-right text-neon-blue"
+                            >
+                              Yakıt Tüketimi
+                            </Label>
+                            <Input
+                              id="edit-yakitTuketimi"
+                              type="number"
+                              value={editingEnvanter.yakitTuketimi || 0} // Ensure it's always a number
+                              onChange={(e) =>
+                                setEditingEnvanter({
+                                  ...editingEnvanter,
+                                  yakitTuketimi: Number(e.target.value),
                                 })
                               }
                               className="col-span-3 bg-gray-800 text-neon-pink border-neon-blue"

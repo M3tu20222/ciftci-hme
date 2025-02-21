@@ -2,8 +2,9 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import dbConnect from "@/lib/mongodb";
+import { Kategori } from "@/models/Kategori";
 import Envanter from "@/models/Envanter";
-
+Kategori
 export async function GET() {
   const session = await getServerSession(authOptions);
 

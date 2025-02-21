@@ -17,5 +17,6 @@ const KategoriSchema: Schema = new Schema(
   { timestamps: true }
 );
 
-export default mongoose.models.Kategori ||
+export const Kategori =
+  mongoose.models.Kategori ||
   mongoose.model<IKategori>("Kategori", KategoriSchema);
